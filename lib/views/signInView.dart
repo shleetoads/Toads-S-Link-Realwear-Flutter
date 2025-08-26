@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lepsi_rw_speech_recognizer/lepsi_rw_speech_recognizer.dart';
+import 'package:realwear_flutter/utils/appConfig.dart';
 import 'package:realwear_flutter/utils/myColors.dart';
 import 'package:realwear_flutter/utils/myLoading.dart';
 import 'package:realwear_flutter/utils/myToasts.dart';
@@ -29,6 +31,51 @@ class _SignInViewState extends ConsumerState<SignInView> {
 
   final RegExp pwReg =
       RegExp(r'^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,20}$');
+
+  @override
+  void initState() {
+    rw();
+    super.initState();
+  }
+
+  rw() {
+    LepsiRwSpeechRecognizer.setCommands(<String>[
+      '아이디입력',
+      '비밀번호입력',
+      '로그인',
+    ], (command) {
+      logger.i(command);
+
+      switch (command) {
+        case '아이디입력':
+          FocusScope.of(context).requestFocus(emailFocus);
+          break;
+        case '비밀번호입력':
+          FocusScope.of(context).requestFocus(pwFocus);
+          break;
+        case '로그인':
+          login();
+          break;
+        case '취소 편집':
+          rw();
+          break;
+        case '승낙':
+          rw();
+          break;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    LepsiRwSpeechRecognizer.restoreCommands();
+    emailTextCon.dispose();
+    pwTextCon.dispose();
+    emailFocus.dispose();
+    pwFocus.dispose();
+
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

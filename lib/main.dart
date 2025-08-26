@@ -26,16 +26,6 @@ void main() async {
 
   await AppConfig.requestAllPermissions();
 
-  // LepsiRwSpeechRecognizer.setCommands(<String>[
-  //   'Full Boar',
-  //   'California Sunshine',
-  //   'Deadicated',
-  // ], (command) {
-  //   setState(() {
-  //     _speechCommand = command;
-  //   });
-  // });
-
   runApp(ProviderScope(child: MyApp()));
 }
 

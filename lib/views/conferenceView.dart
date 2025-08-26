@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lepsi_rw_speech_recognizer/lepsi_rw_speech_recognizer.dart';
 import 'package:realwear_flutter/models/authModel.dart';
 import 'package:realwear_flutter/models/conferenceModel.dart';
+import 'package:realwear_flutter/utils/appConfig.dart';
 import 'package:realwear_flutter/utils/myColors.dart';
 import 'package:realwear_flutter/utils/myLoading.dart';
 import 'package:realwear_flutter/utils/myToasts.dart';
@@ -24,6 +26,103 @@ class ConferenceView extends ConsumerStatefulWidget {
 class _ConferenceViewState extends ConsumerState<ConferenceView> {
   int perPage = 6;
   int nowPage = 0;
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    rw();
+    super.initState();
+  }
+
+  rw() {
+    LepsiRwSpeechRecognizer.setCommands(<String>[
+      '방만들기',
+      '로그아웃',
+      '다음',
+      '이전',
+      '항목 1 선택',
+      '항목 2 선택',
+      '항목 3 선택',
+      '항목 4 선택',
+      '항목 5 선택',
+      '항목 6 선택',
+    ], (command) async {
+      logger.i(command);
+
+      //이전 다음 화면체크해야됨
+
+      switch (command) {
+        case '방만들기':
+          await LepsiRwSpeechRecognizer.restoreCommands();
+          context.push('/invite').then((_) {
+            rw();
+          });
+          break;
+        case '로그아웃':
+          logout();
+          break;
+        case '다음':
+          List<ConferenceModel> modelList =
+              ref.read(conferenceListViewModelProvider);
+          nextFunc(modelList.length);
+          break;
+        case '이전':
+          prevFunc();
+          break;
+        case '항목 1 선택':
+          List<ConferenceModel> modelList =
+              ref.read(conferenceListViewModelProvider);
+          if (modelList.isEmpty) {
+            break;
+          }
+          goConference(modelList[nowPage == 0 ? 0 : nowPage * perPage - 1]);
+          break;
+        case '항목 2 선택':
+          List<ConferenceModel> modelList =
+              ref.read(conferenceListViewModelProvider);
+          if (modelList.length < 2) {
+            break;
+          }
+          goConference(modelList[nowPage == 0 ? 1 : nowPage * perPage]);
+          break;
+        case '항목 3 선택':
+          List<ConferenceModel> modelList =
+              ref.read(conferenceListViewModelProvider);
+          if (modelList.length < 3) {
+            break;
+          }
+          goConference(modelList[nowPage == 0 ? 2 : nowPage * perPage + 1]);
+          break;
+        case '항목 4 선택':
+          List<ConferenceModel> modelList =
+              ref.read(conferenceListViewModelProvider);
+          if (modelList.length < 4) {
+            break;
+          }
+          goConference(modelList[nowPage == 0 ? 3 : nowPage * perPage + 2]);
+          break;
+        case '항목 5 선택':
+          List<ConferenceModel> modelList =
+              ref.read(conferenceListViewModelProvider);
+          if (modelList.length < 5) {
+            break;
+          }
+          goConference(modelList[nowPage == 0 ? 4 : nowPage * perPage + 3]);
+          break;
+        case '항목 6 선택':
+          if (nowPage == 0) {
+            break;
+          }
+          List<ConferenceModel> modelList =
+              ref.read(conferenceListViewModelProvider);
+          if (modelList.length < 6) {
+            break;
+          }
+          goConference(modelList[nowPage * perPage + 4]);
+          break;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +185,7 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
               ],
             ),
             SizedBox(
-              height: 30,
+              height: 15,
             ),
             Expanded(
               child: GridView.builder(
@@ -104,7 +203,7 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
                           modelList[nowPage == 0
                               ? (index - 1)
                               : (nowPage * perPage + index - 1)],
-                          '항목 ${index + 1} 선택');
+                          '항목 ${nowPage == 0 ? index : index + 1} 선택');
                 },
                 itemCount: itemsInPage(nowPage, modelList.length + 1),
               ),
@@ -156,12 +255,7 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
                         padding: EdgeInsets.zero,
                       ),
                       onPressed: () {
-                        context.go('/signin');
-
-                        ref.read(authViewModelProvider.notifier).logout();
-
-                        final asyncShared = SharedPreferencesAsync();
-                        asyncShared.remove('email');
+                        logout();
                       },
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -193,6 +287,23 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
     );
   }
 
+  logout() {
+    context.go('/signin');
+
+    ref.read(authViewModelProvider.notifier).logout();
+
+    final asyncShared = SharedPreferencesAsync();
+    asyncShared.remove('email');
+  }
+
+  prevFunc() {
+    if (nowPage > 0) {
+      setState(() {
+        nowPage--;
+      });
+    }
+  }
+
   Widget _leftPageWidget() {
     return Row(
       children: [
@@ -205,7 +316,7 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
           width: 10,
         ),
         Text(
-          '이전목록',
+          '이전',
           style: TextStyle(
               color: Color(0xFF7D7D7D),
               fontSize: 22,
@@ -216,11 +327,7 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
         ),
         GestureDetector(
           onTap: () {
-            if (nowPage > 0) {
-              setState(() {
-                nowPage--;
-              });
-            }
+            prevFunc();
           },
           child: CircleAvatar(
             radius: 24, // 크기
@@ -236,16 +343,20 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
     );
   }
 
+  nextFunc(int total) {
+    if (total / perPage > nowPage) {
+      setState(() {
+        nowPage++;
+      });
+    }
+  }
+
   Widget _rightPageWidget(int total) {
     return Row(
       children: [
         GestureDetector(
           onTap: () {
-            if (total / perPage > nowPage) {
-              setState(() {
-                nowPage++;
-              });
-            }
+            nextFunc(total);
           },
           child: CircleAvatar(
             radius: 24, // 크기
@@ -269,7 +380,7 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
           width: 10,
         ),
         Text(
-          '다음목록',
+          '다음',
           style: TextStyle(
               color: Color(0xFF7D7D7D),
               fontSize: 22,
@@ -283,6 +394,61 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
     int start = pageIndex * perPage;
     int remaining = totalItems - start;
     return remaining > perPage ? perPage : remaining;
+  }
+
+  goConference(ConferenceModel model) {
+    MyLoading().showLoading(context);
+
+    AuthModel? authModel = ref.read(authViewModelProvider);
+    if (authModel != null) {
+      ref.read(tokenViewModelProvider.notifier).createToken(
+            meetId: model.meetId!,
+            accountNo: authModel.accountNo!,
+            successFunc: (String token) {
+              MyLoading().hideLoading(context);
+
+              showDialog(
+                context: context,
+                builder: (context) => NormalAlertDialog(
+                  title: 'Wolud you like to join this meeting room?',
+                  btnTitle: 'OK',
+                  onTap: () {
+                    MyLoading().showLoading(context);
+
+                    ref.read(conferenceViewModelProvider.notifier).joinRoom(
+                        meetId: model.meetId!,
+                        accountNo: authModel.accountNo!,
+                        userName: authModel.userName!,
+                        companyNo: authModel.companyNo!,
+                        successFunc: () async {
+                          // 이 룸정보 넣어줘야될듯
+
+                          ref
+                              .read(conferenceViewModelProvider.notifier)
+                              .init(model: model);
+
+                          context.pop(true);
+
+                          // await AppConfig.hideStatusNavigationBar();
+
+                          context.push('/conference/detail', extra: {
+                            'meetId': model.meetId!,
+                            'token': token,
+                            'accountNo': authModel.accountNo!,
+                            'companyNo': authModel.companyNo!,
+                          });
+                        },
+                        failFunc: () {
+                          MyToasts().showNormal('This is a closed meeting.');
+                          MyLoading().hideLoading(context);
+                          context.pop(false);
+                        });
+                  },
+                ),
+              );
+            },
+          );
+    }
   }
 
   Widget _conferenceWidget(ConferenceModel model, String voiceMent) {
@@ -307,66 +473,7 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
               highlightColor: const Color(0xFF4A90DC).withOpacity(0.15),
               borderRadius: BorderRadius.circular(15),
               onTap: () async {
-                MyLoading().showLoading(context);
-
-                AuthModel? authModel = ref.read(authViewModelProvider);
-                if (authModel != null) {
-                  ref.read(tokenViewModelProvider.notifier).createToken(
-                        meetId: model.meetId!,
-                        accountNo: authModel.accountNo!,
-                        successFunc: (String token) {
-                          MyLoading().hideLoading(context);
-
-                          showDialog(
-                            context: context,
-                            builder: (context) => NormalAlertDialog(
-                              title:
-                                  'Wolud you like to join this meeting room?',
-                              btnTitle: 'OK',
-                              onTap: () {
-                                MyLoading().showLoading(context);
-
-                                ref
-                                    .read(conferenceViewModelProvider.notifier)
-                                    .joinRoom(
-                                        meetId: model.meetId!,
-                                        accountNo: authModel.accountNo!,
-                                        userName: authModel.userName!,
-                                        companyNo: authModel.companyNo!,
-                                        successFunc: () async {
-                                          // 이 룸정보 넣어줘야될듯
-
-                                          ref
-                                              .read(conferenceViewModelProvider
-                                                  .notifier)
-                                              .init(model: model);
-
-                                          context.pop(true);
-
-                                          // await AppConfig.hideStatusNavigationBar();
-
-                                          context.push('/conference/detail',
-                                              extra: {
-                                                'meetId': model.meetId!,
-                                                'token': token,
-                                                'accountNo':
-                                                    authModel.accountNo!,
-                                                'companyNo':
-                                                    authModel.companyNo!,
-                                              });
-                                        },
-                                        failFunc: () {
-                                          MyToasts().showNormal(
-                                              'This is a closed meeting.');
-                                          MyLoading().hideLoading(context);
-                                          context.pop(false);
-                                        });
-                              },
-                            ),
-                          );
-                        },
-                      );
-                }
+                goConference(model);
               },
               child: Center(
                 child: Text(

@@ -24,14 +24,14 @@
     <application
         android:label="realwear_flutter"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:enabled="true"
             android:launchMode="singleTop"
-            android:enableOnBackInvokedCallback="true"
             android:usesCleartextTraffic="true"
             android:requestLegacyExternalStorage="true"
             android:resizeableActivity="false"
