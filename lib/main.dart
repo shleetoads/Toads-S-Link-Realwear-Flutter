@@ -10,17 +10,22 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:realwear_flutter/dataSource/socketManager.dart';
 import 'package:realwear_flutter/utils/appConfig.dart';
 import 'package:realwear_flutter/utils/myColors.dart';
+import 'package:realwear_flutter/viewModels/localeViewModel.dart';
 import 'package:realwear_flutter/views/conferenceDetailView.dart';
 import 'package:realwear_flutter/views/conferenceView.dart';
 import 'package:realwear_flutter/views/inviteMemberInView.dart';
 import 'package:realwear_flutter/views/inviteMemberView.dart';
 import 'package:realwear_flutter/views/signInView.dart';
 import 'package:realwear_flutter/views/splashView.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppConfig.changeToLandscape();
   await AppConfig.hideStatusNavigationBar();
+
+  WakelockPlus.enable();
 
   SocketManager().connect();
 
@@ -65,12 +70,14 @@ final GoRouter goRouter = GoRouter(
   initialLocation: '/',
 );
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   // This widget is the root of your application.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    localeCheck(ref);
+
     return GlobalLoaderOverlay(
       overlayColor: Colors.grey.withOpacity(0.2),
       overlayWidgetBuilder: (_) {
@@ -93,5 +100,11 @@ class MyApp extends StatelessWidget {
         routerConfig: goRouter,
       ),
     );
+  }
+
+  localeCheck(WidgetRef ref) async {
+    final asyncShared = SharedPreferencesAsync();
+    String locale = await asyncShared.getString("locale") ?? "KOR";
+    ref.read(localeViewModelProvider.notifier).setLocale(locale);
   }
 }

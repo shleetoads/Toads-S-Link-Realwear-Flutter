@@ -26,8 +26,7 @@ class PrimaryButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8.0),
           ),
-          backgroundColor:
-              isWhite ? const Color(0xFFF5F7F9) : const Color(0xFF2A82FF),
+          backgroundColor: isWhite ? Colors.grey[800] : const Color(0xFF246CFD),
           // side: BorderSide(
           //   color: isWhite ? Colors.grey : const Color(0xFF2A82FF),
           // ),
@@ -39,7 +38,7 @@ class PrimaryButton extends StatelessWidget {
           style: textStyle ??
               TextStyle(
                   letterSpacing: -0.5,
-                  color: isWhite ? const Color(0xFF222B32) : Colors.white,
+                  color: isWhite ? Colors.white : Colors.white,
                   fontSize: isWhite ? 23 : 23,
                   fontWeight: isWhite ? FontWeight.w500 : FontWeight.w600),
         ),

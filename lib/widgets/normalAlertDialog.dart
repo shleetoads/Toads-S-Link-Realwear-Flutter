@@ -35,7 +35,7 @@ class _NormalAlertDialogState extends State<NormalAlertDialog> {
               width: 400,
               padding: const EdgeInsets.all(0),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Color(0xFF272B37),
                 shape: BoxShape.rectangle,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
@@ -58,7 +58,7 @@ class _NormalAlertDialogState extends State<NormalAlertDialog> {
                     child: Text(
                       widget.title,
                       style: const TextStyle(
-                        color: Colors.black,
+                        color: Colors.white,
                         fontSize: 23,
                         fontWeight: FontWeight.w500,
                       ),
@@ -69,8 +69,11 @@ class _NormalAlertDialogState extends State<NormalAlertDialog> {
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: PrimaryButton(
-                        title: widget.btnTitle, onTap: widget.onTap),
+                    child: Semantics(
+                      value: 'hf_no_number',
+                      child: PrimaryButton(
+                          title: widget.btnTitle, onTap: widget.onTap),
+                    ),
                   ),
                   const SizedBox(
                     height: 20,

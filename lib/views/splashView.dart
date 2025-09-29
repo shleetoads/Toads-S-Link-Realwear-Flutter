@@ -44,7 +44,7 @@ class _SplashViewState extends ConsumerState<SplashView> {
             email: email,
             duplicateFunc: () {
               MyToasts().showNormal('This email is already signed in.');
-              context.go('signin');
+              context.go('/signin');
             },
             successFunc: (int accountNo, int companyNo, String email) {
               //리프래시 룸 리스트 미리 달아주기

@@ -30,7 +30,7 @@ class AppConfig {
 
   static changeToLandscape() async {
     await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeRight,
+      // DeviceOrientation.landscapeRight,
       DeviceOrientation.landscapeLeft,
     ]);
   }

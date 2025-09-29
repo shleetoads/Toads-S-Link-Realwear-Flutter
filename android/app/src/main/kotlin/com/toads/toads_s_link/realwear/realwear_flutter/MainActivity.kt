@@ -15,6 +15,11 @@ class MainActivity: FlutterActivity(){
     
     private val CHANNEL = "ToadsSLink"
 
+    private val ACTION_OVERRIDE_COMMANDS = "com.realwear.wearhf.intent.action.OVERRIDE_COMMANDS"
+    private val EXTRA_SOURCE_PACKAGE = "com.realwear.wearhf.intent.extra.SOURCE_PACKAGE"
+    private val EXTRA_COMMANDS = "com.realwear.wearhf.intent.extra.COMMANDS"
+    private val EXTRA_RESULT = "command"
+
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
@@ -26,6 +31,20 @@ class MainActivity: FlutterActivity(){
                 "refreshMedia" -> {
                     val path: String? = call.argument("path")
                     mcResult.success(refreshMedia((path)));
+                }
+                "applyCommand" -> {
+
+                    Log.e("applyCommand", "applyCommand")
+
+                    val commands = arrayListOf("방만들기", "방나가기")
+
+                    val intent = Intent(ACTION_OVERRIDE_COMMANDS)
+                    intent.putExtra(EXTRA_SOURCE_PACKAGE, "com.toads.toads_s_link.realwear.realwear_flutter")
+                    intent.putExtra(EXTRA_COMMANDS, commands) // nullable 제거
+                    this.sendBroadcast(intent)
+
+                    mcResult.success(null) // 작업 성공 알림
+
                 }
                 else -> {
                     mcResult.notImplemented();
