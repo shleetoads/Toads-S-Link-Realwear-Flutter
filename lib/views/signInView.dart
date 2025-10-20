@@ -88,7 +88,6 @@ class _SignInViewState extends ConsumerState<SignInView> {
 
   @override
   void dispose() {
-    LepsiRwSpeechRecognizer.restoreCommands();
     emailTextCon.dispose();
     pwTextCon.dispose();
     emailFocus.dispose();

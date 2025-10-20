@@ -45,13 +45,12 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
   void initState() {
     localKr = ref.read(localeViewModelProvider) == 'KOR';
 
-    rw();
     super.initState();
-  }
 
-  @override
-  void dispose() {
-    super.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await LepsiRwSpeechRecognizer.restoreCommands();
+      rw();
+    });
   }
 
   rw() {
@@ -87,10 +86,11 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
         case '방만들기':
         case 'Create':
           await LepsiRwSpeechRecognizer.restoreCommands();
-          context.push('/invite').then((value) {
+          context.push('/invite').then((value) async {
             logger.i('여기');
             logger.i(value);
             if (value == null) {
+              await LepsiRwSpeechRecognizer.restoreCommands();
               rw();
             }
           });

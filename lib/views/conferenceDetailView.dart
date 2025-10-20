@@ -402,7 +402,7 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
   }
 
   @override
-  void dispose() async {
+  void dispose() {
     // WidgetsBinding.instance.removeObserver(this);
     _dispose();
     super.dispose();

@@ -241,11 +241,11 @@ class _InviteMemberViewState extends ConsumerState<InviteMemberView> {
     });
   }
 
-  @override
-  void dispose() {
-    LepsiRwSpeechRecognizer.restoreCommands();
-    super.dispose();
-  }
+  // @override
+  // void dispose() {
+  //   LepsiRwSpeechRecognizer.restoreCommands();
+  //   super.dispose();
+  // }
 
   void _onRefresh() async {
     AuthModel authModel = ref.read(authViewModelProvider)!;
