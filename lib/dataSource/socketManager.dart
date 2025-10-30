@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:realwear_flutter/utils/appConfig.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
@@ -13,11 +14,11 @@ class SocketManager {
 
   SocketManager._internal();
 
-  Future<void> connect() async {
+  Future<void> connect(String url) async {
     Completer completer = Completer<void>();
 
     socket = IO.io(
-      AppConfig.BASE_URL, // 서버 URL
+      url, // 서버 URL
       IO.OptionBuilder()
           .setTransports(['websocket']) // WebSocket 사용
           .enableAutoConnect()

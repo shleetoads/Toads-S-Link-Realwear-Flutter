@@ -6,10 +6,12 @@ import 'package:lepsi_rw_speech_recognizer/lepsi_rw_speech_recognizer.dart';
 import 'package:realwear_flutter/models/authModel.dart';
 import 'package:realwear_flutter/models/conferenceModel.dart';
 import 'package:realwear_flutter/utils/appConfig.dart';
+import 'package:realwear_flutter/utils/createChannel.dart';
 import 'package:realwear_flutter/utils/myColors.dart';
 import 'package:realwear_flutter/utils/myLoading.dart';
 import 'package:realwear_flutter/utils/myToasts.dart';
 import 'package:realwear_flutter/viewModels/authViewModel.dart';
+import 'package:realwear_flutter/viewModels/changeNetworkCreateRoomViewModel.dart';
 import 'package:realwear_flutter/viewModels/conferenceListViewModel.dart';
 import 'package:realwear_flutter/viewModels/conferenceViewModel.dart';
 import 'package:realwear_flutter/viewModels/localeViewModel.dart';
@@ -50,7 +52,77 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await LepsiRwSpeechRecognizer.restoreCommands();
       rw();
+
+      bool? changeNetworkCreateRoomValue =
+          ref.read(changeNetworkCreateRoomViewModelProvider);
+
+      if (changeNetworkCreateRoomValue != null &&
+          changeNetworkCreateRoomValue &&
+          AppConfig.isExternal) {
+        changeNetworkCreateRoom();
+      }
     });
+  }
+
+  void changeNetworkCreateRoom() async {
+    logger.d('방안에서 네트워크 체인지 해서 바로 방으로 넣어주기');
+    await Future.delayed(const Duration(seconds: 1));
+
+    AuthModel authModel = ref.read(authViewModelProvider)!;
+
+    MyLoading().showLoading(context);
+
+    String meetId = CreateChannel().createChannelId();
+
+    ref.read(tokenViewModelProvider.notifier).createToken(
+          meetId: meetId,
+          accountNo: authModel.accountNo!,
+          successFunc: (String token) async {
+            ref.read(conferenceViewModelProvider.notifier).createConference(
+                meetId: meetId,
+                accountNo: authModel.accountNo!,
+                companyNo: authModel.companyNo!,
+                subject: authModel.userName!,
+                authList: []);
+
+            await Future.delayed(const Duration(seconds: 1));
+
+            ref.read(conferenceViewModelProvider.notifier).joinRoom(
+                meetId: meetId,
+                accountNo: authModel.accountNo!,
+                userName: authModel.userName!,
+                companyNo: authModel.companyNo!,
+                successFunc: () async {
+                  // 이 룸정보 넣어줘야될듯
+
+                  ref
+                      .read(conferenceViewModelProvider.notifier)
+                      .getConference(meetId: meetId);
+
+                  await AppConfig.changeToLandscape();
+                  // await AppConfig
+                  //     .hideStatusNavigationBar();
+
+                  ref
+                      .read(changeNetworkCreateRoomViewModelProvider.notifier)
+                      .setValue(null);
+                  context.push('/conference/detail', extra: {
+                    'meetId': meetId,
+                    'token': token,
+                    'accountNo': authModel.accountNo!,
+                    'companyNo': authModel.companyNo!,
+                  });
+                },
+                failFunc: () {
+                  ref
+                      .read(changeNetworkCreateRoomViewModelProvider.notifier)
+                      .setValue(null);
+
+                  MyToasts().showNormal('This is a closed meeting.');
+                  MyLoading().hideLoading(context);
+                });
+          },
+        );
   }
 
   rw() {
@@ -173,6 +245,19 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(
+      changeNetworkCreateRoomViewModelProvider,
+      (previous, next) async {
+        logger.d(previous);
+        logger.d(next);
+        if (previous != null && next != null) {
+          if (!previous && next && AppConfig.isExternal) {
+            changeNetworkCreateRoom();
+          }
+        }
+      },
+    );
+
     AuthModel? authModel = ref.watch(authViewModelProvider);
     List<ConferenceModel> modelList =
         ref.watch(conferenceListViewModelProvider);
@@ -181,7 +266,7 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
         child: Column(
           children: [
             Row(
@@ -191,15 +276,23 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
                   width: 17,
                 ),
                 SizedBox(
-                  width: 7,
+                  width: 10,
                 ),
+                //네트워크 변경
                 Text(
-                  'Conference List',
+                  'External Conference',
                   style: TextStyle(
                       color: Colors.white,
-                      fontSize: 22,
+                      fontSize: 18,
                       fontWeight: FontWeight.w600),
                 ),
+                // Text(
+                //   'Conference List',
+                //   style: TextStyle(
+                //       color: Colors.white,
+                //       fontSize: 22,
+                //       fontWeight: FontWeight.w600),
+                // ),
                 Spacer(),
                 Row(
                   mainAxisSize: MainAxisSize.min,
@@ -399,27 +492,53 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
                   _rightPageWidget(modelList.length),
                 ],
                 Spacer(),
-                Image.asset(
-                  'assets/icons/ic_voice.png',
-                  width: 40,
-                  height: 40,
-                ),
+                //네트워크 변경
                 SizedBox(
-                  width: 10,
-                ),
-                Text(
-                  localKr ? '로그아웃' : 'Logout',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w500),
+                  width: 200,
+                  height: 45,
+                  child: Semantics(
+                    value: 'hf_no_number',
+                    child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          elevation: 0.0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                          backgroundColor: Colors.grey,
+                          padding: EdgeInsets.zero,
+                        ),
+                        onPressed: () {
+                          context.push('/dialog/network?isInRoom=false');
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Image.asset(
+                              'assets/icons/ic_network.png',
+                              width: 20,
+                              height: 20,
+                            ),
+                            SizedBox(
+                              width: 10,
+                            ),
+                            Text(
+                              'Change Network',
+                              style: TextStyle(
+                                  letterSpacing: -0.5,
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        )),
+                  ),
                 ),
                 SizedBox(
                   width: 20,
                 ),
                 SizedBox(
-                  width: 180,
-                  height: 55,
+                  width: 150,
+                  height: 45,
                   child: Semantics(
                     value: 'hf_no_number',
                     child: ElevatedButton(

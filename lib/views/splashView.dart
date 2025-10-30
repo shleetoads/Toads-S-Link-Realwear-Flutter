@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:realwear_flutter/utils/appConfig.dart';
 import 'package:realwear_flutter/utils/myToasts.dart';
 import 'package:realwear_flutter/viewModels/conferenceListViewModel.dart';
 import 'package:realwear_flutter/viewModels/inviteMemberViewModel.dart';
@@ -60,7 +61,11 @@ class _SplashViewState extends ConsumerState<SplashView> {
                   .read(inviteMemberViewModelProvider.notifier)
                   .getMemberList(companyNo: companyNo, email: email);
 
-              context.go('/conference');
+              if (AppConfig.isExternal) {
+                context.go('/conference');
+              } else {
+                context.go('/internal/conference');
+              }
             },
           );
     }

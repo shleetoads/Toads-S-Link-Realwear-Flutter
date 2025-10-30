@@ -41,6 +41,7 @@ class _SignInViewState extends ConsumerState<SignInView> {
     localKr = ref.read(localeViewModelProvider) == 'KOR';
 
     rw();
+
     super.initState();
   }
 
@@ -55,8 +56,6 @@ class _SignInViewState extends ConsumerState<SignInView> {
       'Switch to English',
       'Switch to Korean',
     ], (command) {
-      logger.i(command);
-
       switch (command) {
         case '아이디입력':
         case 'ID Input':
@@ -581,7 +580,11 @@ class _SignInViewState extends ConsumerState<SignInView> {
 
             MyLoading().hideLoading(context);
 
-            context.go('/conference');
+            if (AppConfig.isExternal) {
+              context.go('/conference');
+            } else {
+              context.go('/internal/conference');
+            }
           },
         );
   }

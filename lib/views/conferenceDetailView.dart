@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter_screen_recording/flutter_screen_recording.dart';
@@ -440,8 +441,8 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
     _engine = createAgoraRtcEngine();
 
     // Initialize RtcEngine and set the channel profile to live broadcasting
-    await _engine.initialize(const RtcEngineContext(
-      appId: AppConfig.AGORA_APP_ID,
+    await _engine.initialize(RtcEngineContext(
+      appId: dotenv.env['AGORA_APP_ID']!,
       channelProfile: ChannelProfileType.channelProfileCommunication,
       areaCode: 4,
     ));
@@ -1153,7 +1154,55 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
                     ),
                   ),
                   Spacer(),
-                  if (!_showChat)
+                  if (!_showChat) ...[
+                    //네트워크 변경
+                    Semantics(
+                      value: 'hf_no_number',
+                      child: GestureDetector(
+                        onTap: () {
+                          context.push(
+                            '/dialog/network?isInRoom=true',
+                            extra: () async {
+                              await _leaveFunc();
+                            },
+                          );
+                        },
+                        child: Semantics(
+                          value: 'hf_no_number',
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Color(0xFF767676).withOpacity(0.8),
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(50)),
+                            ),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 5),
+                            child: Row(
+                              children: [
+                                Image.asset(
+                                  'assets/icons/ic_network.png',
+                                  width: 18,
+                                  height: 18,
+                                ),
+                                SizedBox(
+                                  width: 5,
+                                ),
+                                Text(
+                                  'Change Network',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: localKr ? 18 : 16,
+                                      fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 10,
+                    ),
                     Semantics(
                       value: 'hf_no_number',
                       child: GestureDetector(
@@ -1191,6 +1240,7 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
                         ),
                       ),
                     ),
+                  ],
                 ],
               ),
             ),
@@ -1334,7 +1384,7 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
           Directory directory;
 
           if (Platform.isAndroid) {
-            directory = Directory(AppConfig.AOS_DCIM_PATH);
+            directory = Directory(dotenv.env['AOS_DCIM_PATH']!);
 
             if (!directory.existsSync()) {
               await directory.create(recursive: true);
@@ -1493,7 +1543,7 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
 
         //IOS는 document폴더에 알아서 저장 android도 저장되는거 같은데 그거 삭제하고 외부에 저장
         if (Platform.isAndroid) {
-          Directory directory = Directory(AppConfig.AOS_DCIM_PATH);
+          Directory directory = Directory(dotenv.env['AOS_DCIM_PATH']!);
 
           if (!directory.existsSync()) {
             await directory.create(recursive: true);

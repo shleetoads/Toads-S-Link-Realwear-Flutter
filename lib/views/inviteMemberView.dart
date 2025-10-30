@@ -258,213 +258,410 @@ class _InviteMemberViewState extends ConsumerState<InviteMemberView> {
     });
   }
 
-  invite() {
+  invite() async {
     AuthModel authModel = ref.read(authViewModelProvider)!;
     String meetId = CreateChannel().createChannelId();
 
-    ref.read(tokenViewModelProvider.notifier).createToken(
-          meetId: meetId,
-          accountNo: authModel.accountNo!,
-          successFunc: (String token) async {
-            ref.read(conferenceViewModelProvider.notifier).createConference(
-                meetId: meetId,
-                accountNo: authModel.accountNo!,
-                companyNo: authModel.companyNo!,
-                subject: authModel.userName!,
-                authList: selectedList);
+    if (AppConfig.isExternal) {
+      ref.read(tokenViewModelProvider.notifier).createToken(
+            meetId: meetId,
+            accountNo: authModel.accountNo!,
+            successFunc: (String token) async {
+              ref.read(conferenceViewModelProvider.notifier).createConference(
+                  meetId: meetId,
+                  accountNo: authModel.accountNo!,
+                  companyNo: authModel.companyNo!,
+                  subject: authModel.userName!,
+                  authList: selectedList);
 
-            await LepsiRwSpeechRecognizer.restoreCommands();
-            LepsiRwSpeechRecognizer.setCommands(<String>[
-              '네',
-              'Okay',
-              '취소',
-              'Cancel',
-            ], (command) async {
-              logger.i(command);
+              await LepsiRwSpeechRecognizer.restoreCommands();
+              LepsiRwSpeechRecognizer.setCommands(<String>[
+                '네',
+                'Okay',
+                '취소',
+                'Cancel',
+              ], (command) async {
+                logger.i(command);
 
-              //이전 다음 화면체크해야됨
+                //이전 다음 화면체크해야됨
 
-              switch (command) {
-                case '네':
-                case 'Okay':
-                  MyLoading().showLoading(context);
+                switch (command) {
+                  case '네':
+                  case 'Okay':
+                    MyLoading().showLoading(context);
 
-                  ref.read(conferenceViewModelProvider.notifier).joinRoom(
-                      meetId: meetId,
-                      accountNo: authModel.accountNo!,
-                      userName: authModel.userName!,
-                      companyNo: authModel.companyNo!,
-                      successFunc: () async {
-                        // 이 룸정보 넣어줘야될듯
+                    ref.read(conferenceViewModelProvider.notifier).joinRoom(
+                        meetId: meetId,
+                        accountNo: authModel.accountNo!,
+                        userName: authModel.userName!,
+                        companyNo: authModel.companyNo!,
+                        successFunc: () async {
+                          // 이 룸정보 넣어줘야될듯
 
-                        ref
-                            .read(conferenceViewModelProvider.notifier)
-                            .getConference(meetId: meetId);
+                          ref
+                              .read(conferenceViewModelProvider.notifier)
+                              .getConference(meetId: meetId);
 
-                        context.pop(true);
+                          context.pop(true);
 
-                        await LepsiRwSpeechRecognizer.restoreCommands();
+                          await LepsiRwSpeechRecognizer.restoreCommands();
 
-                        context.push('/conference/detail', extra: {
-                          'meetId': meetId,
-                          'token': token,
-                          'accountNo': authModel.accountNo!,
-                          'companyNo': authModel.companyNo!,
-                        }).then(
-                          (_) {
-                            context.pop();
-                          },
-                        );
-                      },
-                      failFunc: () async {
-                        MyToasts().showNormal('This is a closed meeting.');
-                        MyLoading().hideLoading(context);
-                        context.pop();
+                          context.push('/conference/detail', extra: {
+                            'meetId': meetId,
+                            'token': token,
+                            'accountNo': authModel.accountNo!,
+                            'companyNo': authModel.companyNo!,
+                          }).then(
+                            (_) {
+                              context.pop();
+                            },
+                          );
+                        },
+                        failFunc: () async {
+                          MyToasts().showNormal('This is a closed meeting.');
+                          MyLoading().hideLoading(context);
+                          context.pop();
 
-                        await LepsiRwSpeechRecognizer.restoreCommands();
-                        rw();
-                      });
-                  break;
+                          await LepsiRwSpeechRecognizer.restoreCommands();
+                          rw();
+                        });
+                    break;
 
-                case '취소':
-                case 'Cancel':
-                  context.pop();
-                  break;
-              }
-            });
-            showDialog(
-              context: context,
-              builder: (context) {
-                return Dialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                  elevation: 0,
-                  backgroundColor: Colors.transparent,
-                  insetPadding: const EdgeInsets.symmetric(horizontal: 0),
-                  child: Container(
-                    width: 390,
-                    padding: const EdgeInsets.all(0),
-                    decoration: BoxDecoration(
-                      color: Color(0xFF272B37),
-                      shape: BoxShape.rectangle,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.25),
-                          spreadRadius: 3,
-                          blurRadius: 3,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
+                  case '취소':
+                  case 'Cancel':
+                    context.pop();
+                    break;
+                }
+              });
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return Dialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.0),
                     ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        Image.asset(
-                          'assets/icons/ic_dialog_check.png',
-                          width: 64,
-                        ),
-                        const SizedBox(
-                          height: 15,
-                        ),
-                        const Text(
-                          'Success!',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.w600,
+                    elevation: 0,
+                    backgroundColor: Colors.transparent,
+                    insetPadding: const EdgeInsets.symmetric(horizontal: 0),
+                    child: Container(
+                      width: 390,
+                      padding: const EdgeInsets.all(0),
+                      decoration: BoxDecoration(
+                        color: Color(0xFF272B37),
+                        shape: BoxShape.rectangle,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.25),
+                            spreadRadius: 3,
+                            blurRadius: 3,
+                            offset: const Offset(0, 5),
                           ),
-                        ),
-                        const SizedBox(
-                          height: 12,
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: const Text(
-                            'Your conference room has been successfully created.',
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          const SizedBox(
+                            height: 20,
+                          ),
+                          Image.asset(
+                            'assets/icons/ic_dialog_check.png',
+                            width: 64,
+                          ),
+                          const SizedBox(
+                            height: 15,
+                          ),
+                          const Text(
+                            'Success!',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 23,
-                              fontWeight: FontWeight.w500,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ),
-                        const SizedBox(
-                          height: 24,
-                        ),
-                        SizedBox(
-                          width: 135,
-                          child: Semantics(
-                            value: 'hf_no_number',
-                            child: PrimaryButton(
-                              title: 'OK',
-                              onTap: () {
-                                MyLoading().showLoading(context);
-
-                                ref
-                                    .read(conferenceViewModelProvider.notifier)
-                                    .joinRoom(
-                                        meetId: meetId,
-                                        accountNo: authModel.accountNo!,
-                                        userName: authModel.userName!,
-                                        companyNo: authModel.companyNo!,
-                                        successFunc: () async {
-                                          // 이 룸정보 넣어줘야될듯
-
-                                          ref
-                                              .read(conferenceViewModelProvider
-                                                  .notifier)
-                                              .getConference(meetId: meetId);
-
-                                          context.pop(true);
-                                          context.pop();
-
-                                          await LepsiRwSpeechRecognizer
-                                              .restoreCommands();
-
-                                          context.push('/conference/detail',
-                                              extra: {
-                                                'meetId': meetId,
-                                                'token': token,
-                                                'accountNo':
-                                                    authModel.accountNo!,
-                                                'companyNo':
-                                                    authModel.companyNo!,
-                                              });
-                                        },
-                                        failFunc: () async {
-                                          MyToasts().showNormal(
-                                              'This is a closed meeting.');
-                                          MyLoading().hideLoading(context);
-                                          context.pop();
-                                        });
-                              },
+                          const SizedBox(
+                            height: 12,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: const Text(
+                              'Your conference room has been successfully created.',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 23,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                      ],
+                          const SizedBox(
+                            height: 24,
+                          ),
+                          SizedBox(
+                            width: 135,
+                            child: Semantics(
+                              value: 'hf_no_number',
+                              child: PrimaryButton(
+                                title: 'OK',
+                                onTap: () {
+                                  MyLoading().showLoading(context);
+
+                                  ref
+                                      .read(
+                                          conferenceViewModelProvider.notifier)
+                                      .joinRoom(
+                                          meetId: meetId,
+                                          accountNo: authModel.accountNo!,
+                                          userName: authModel.userName!,
+                                          companyNo: authModel.companyNo!,
+                                          successFunc: () async {
+                                            // 이 룸정보 넣어줘야될듯
+
+                                            ref
+                                                .read(
+                                                    conferenceViewModelProvider
+                                                        .notifier)
+                                                .getConference(meetId: meetId);
+
+                                            context.pop(true);
+                                            context.pop();
+
+                                            await LepsiRwSpeechRecognizer
+                                                .restoreCommands();
+
+                                            context.push('/conference/detail',
+                                                extra: {
+                                                  'meetId': meetId,
+                                                  'token': token,
+                                                  'accountNo':
+                                                      authModel.accountNo!,
+                                                  'companyNo':
+                                                      authModel.companyNo!,
+                                                });
+                                          },
+                                          failFunc: () async {
+                                            MyToasts().showNormal(
+                                                'This is a closed meeting.');
+                                            MyLoading().hideLoading(context);
+                                            context.pop();
+                                          });
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(
+                            height: 20,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
-            ).then(
-              (value) async {
-                logger.e(value);
-                if (value == null) {
+                  );
+                },
+              ).then(
+                (value) async {
+                  logger.e(value);
+                  if (value == null) {
+                    await LepsiRwSpeechRecognizer.restoreCommands();
+                    rw();
+                  }
+                },
+              );
+            },
+          );
+    } else {
+      ref.read(conferenceViewModelProvider.notifier).createConference(
+          meetId: meetId,
+          accountNo: authModel.accountNo!,
+          companyNo: authModel.companyNo!,
+          subject: authModel.userName!,
+          authList: selectedList);
+
+      await LepsiRwSpeechRecognizer.restoreCommands();
+      LepsiRwSpeechRecognizer.setCommands(<String>[
+        '네',
+        'Okay',
+        '취소',
+        'Cancel',
+      ], (command) async {
+        logger.i(command);
+
+        //이전 다음 화면체크해야됨
+
+        switch (command) {
+          case '네':
+          case 'Okay':
+            MyLoading().showLoading(context);
+
+            ref.read(conferenceViewModelProvider.notifier).joinRoom(
+                meetId: meetId,
+                accountNo: authModel.accountNo!,
+                userName: authModel.userName!,
+                companyNo: authModel.companyNo!,
+                successFunc: () async {
+                  // 이 룸정보 넣어줘야될듯
+
+                  ref
+                      .read(conferenceViewModelProvider.notifier)
+                      .getConference(meetId: meetId);
+
+                  context.pop(true);
+
+                  await LepsiRwSpeechRecognizer.restoreCommands();
+
+                  context.push('/internal/detail', extra: {
+                    'meetId': meetId,
+                    'accountNo': authModel.accountNo!,
+                    'companyNo': authModel.companyNo!,
+                  }).then(
+                    (_) {
+                      context.pop();
+                    },
+                  );
+                },
+                failFunc: () async {
+                  MyToasts().showNormal('This is a closed meeting.');
+                  MyLoading().hideLoading(context);
+                  context.pop();
+
                   await LepsiRwSpeechRecognizer.restoreCommands();
                   rw();
-                }
-              },
-            );
-          },
-        );
+                });
+            break;
+
+          case '취소':
+          case 'Cancel':
+            context.pop();
+            break;
+        }
+      });
+      showDialog(
+        context: context,
+        builder: (context) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.0),
+            ),
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 0),
+            child: Container(
+              width: 390,
+              padding: const EdgeInsets.all(0),
+              decoration: BoxDecoration(
+                color: Color(0xFF272B37),
+                shape: BoxShape.rectangle,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.25),
+                    spreadRadius: 3,
+                    blurRadius: 3,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  Image.asset(
+                    'assets/icons/ic_dialog_check.png',
+                    width: 64,
+                  ),
+                  const SizedBox(
+                    height: 15,
+                  ),
+                  const Text(
+                    'Success!',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 12,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: const Text(
+                      'Your conference room has been successfully created.',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 23,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 24,
+                  ),
+                  SizedBox(
+                    width: 135,
+                    child: Semantics(
+                      value: 'hf_no_number',
+                      child: PrimaryButton(
+                        title: 'OK',
+                        onTap: () {
+                          MyLoading().showLoading(context);
+
+                          ref
+                              .read(conferenceViewModelProvider.notifier)
+                              .joinRoom(
+                                  meetId: meetId,
+                                  accountNo: authModel.accountNo!,
+                                  userName: authModel.userName!,
+                                  companyNo: authModel.companyNo!,
+                                  successFunc: () async {
+                                    // 이 룸정보 넣어줘야될듯
+
+                                    ref
+                                        .read(conferenceViewModelProvider
+                                            .notifier)
+                                        .getConference(meetId: meetId);
+
+                                    context.pop(true);
+                                    context.pop();
+
+                                    await LepsiRwSpeechRecognizer
+                                        .restoreCommands();
+
+                                    context.push('/internal/detail', extra: {
+                                      'meetId': meetId,
+                                      'accountNo': authModel.accountNo!,
+                                      'companyNo': authModel.companyNo!,
+                                    });
+                                  },
+                                  failFunc: () async {
+                                    MyToasts().showNormal(
+                                        'This is a closed meeting.');
+                                    MyLoading().hideLoading(context);
+                                    context.pop();
+                                  });
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 20,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ).then(
+        (value) async {
+          logger.e(value);
+          if (value == null) {
+            await LepsiRwSpeechRecognizer.restoreCommands();
+            rw();
+          }
+        },
+      );
+    }
   }
 
   @override
