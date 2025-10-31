@@ -290,48 +290,51 @@ class _InternalIpViewState extends ConsumerState<InternalIpView> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: PrimaryButton(
-                          title: 'Connect',
-                          onTap: () async {
-                            if (ipEditingController.text.isEmpty) {
-                              MyToasts().showNormal('Please enter the IP.');
-                              return;
-                            }
+                        child: Semantics(
+                          value: 'hf_no_number',
+                          child: PrimaryButton(
+                            title: 'Connect',
+                            onTap: () async {
+                              if (ipEditingController.text.isEmpty) {
+                                MyToasts().showNormal('Please enter the IP.');
+                                return;
+                              }
 
-                            if (portEditingController.text.isEmpty) {
-                              MyToasts().showNormal('Please enter the Port.');
-                              return;
-                            }
+                              if (portEditingController.text.isEmpty) {
+                                MyToasts().showNormal('Please enter the Port.');
+                                return;
+                              }
 
-                            try {
-                              await SocketManager().connect(
-                                  '${ipEditingController.text}:${portEditingController.text}');
+                              try {
+                                await SocketManager().connect(
+                                    '${ipEditingController.text}:${portEditingController.text}');
 
-                              setState(() {
-                                AppConfig.isExternal = false;
+                                setState(() {
+                                  AppConfig.isExternal = false;
 
-                                print(AppConfig.isExternal);
+                                  print(AppConfig.isExternal);
 
-                                AppConfig.INTERNAL_URL =
-                                    '${ipEditingController.text}:${portEditingController.text}';
-                              });
+                                  AppConfig.INTERNAL_URL =
+                                      '${ipEditingController.text}:${portEditingController.text}';
+                                });
 
-                              final SharedPreferencesAsync asyncPrefs =
-                                  SharedPreferencesAsync();
+                                final SharedPreferencesAsync asyncPrefs =
+                                    SharedPreferencesAsync();
 
-                              asyncPrefs.setString(
-                                  'internalURL', AppConfig.INTERNAL_URL);
+                                asyncPrefs.setString(
+                                    'internalURL', AppConfig.INTERNAL_URL);
 
-                              asyncPrefs.setBool(
-                                  'isExternal', AppConfig.isExternal);
+                                asyncPrefs.setBool(
+                                    'isExternal', AppConfig.isExternal);
 
-                              context.go('/');
-                            } catch (e) {
-                              MyToasts().showNormal(
-                                  'Internal Network Socket Connect Error');
-                              context.go('/network');
-                            }
-                          },
+                                context.go('/');
+                              } catch (e) {
+                                MyToasts().showNormal(
+                                    'Internal Network Socket Connect Error');
+                                context.go('/network');
+                              }
+                            },
+                          ),
                         ),
                       ),
                     ],

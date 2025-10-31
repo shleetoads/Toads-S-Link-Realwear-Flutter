@@ -125,65 +125,70 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkView> {
                               child: SizedBox(
                                 width: double.infinity,
                                 height: 60,
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    elevation: 0.0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8.0),
+                                child: Semantics(
+                                  value: 'hf_no_number',
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      elevation: 0.0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(8.0),
+                                      ),
+                                      backgroundColor: const Color(0xFF2A82FF),
+                                      padding: EdgeInsets.zero,
                                     ),
-                                    backgroundColor: const Color(0xFF2A82FF),
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                  onPressed: () async {
-                                    final SharedPreferencesAsync asyncPrefs =
-                                        SharedPreferencesAsync();
-                                    String? url = await asyncPrefs
-                                        .getString('internalURL');
-                                    if (url == null) {
-                                      context.go('/internal/ip');
-                                    } else {
-                                      try {
-                                        await SocketManager().connect(url);
+                                    onPressed: () async {
+                                      final SharedPreferencesAsync asyncPrefs =
+                                          SharedPreferencesAsync();
+                                      String? url = await asyncPrefs
+                                          .getString('internalURL');
+                                      if (url == null) {
+                                        context.go('/internal/ip');
+                                      } else {
+                                        try {
+                                          await SocketManager().connect(url);
 
-                                        setState(() {
-                                          AppConfig.INTERNAL_URL = url;
-                                          AppConfig.isExternal = false;
-                                        });
+                                          setState(() {
+                                            AppConfig.INTERNAL_URL = url;
+                                            AppConfig.isExternal = false;
+                                          });
 
-                                        SharedPreferencesAsync asyncPrefs =
-                                            SharedPreferencesAsync();
-                                        asyncPrefs.setBool(
-                                            'isExternal', AppConfig.isExternal);
-                                      } catch (e) {
-                                        SocketManager()
-                                            .connect(dotenv.env['BASE_URL']!);
-                                        MyToasts().showNormal(
-                                            'Internal Network Socket Connect Error');
-                                      } finally {
-                                        context.go('/');
+                                          SharedPreferencesAsync asyncPrefs =
+                                              SharedPreferencesAsync();
+                                          asyncPrefs.setBool('isExternal',
+                                              AppConfig.isExternal);
+                                        } catch (e) {
+                                          SocketManager()
+                                              .connect(dotenv.env['BASE_URL']!);
+                                          MyToasts().showNormal(
+                                              'Internal Network Socket Connect Error');
+                                        } finally {
+                                          context.go('/');
+                                        }
                                       }
-                                    }
-                                  },
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Image.asset(
-                                        'assets/icons/ic_internal.png',
-                                        width: 26,
-                                        height: 24,
-                                      ),
-                                      SizedBox(
-                                        width: 15,
-                                      ),
-                                      Text(
-                                        'Internal Network',
-                                        style: TextStyle(
-                                            letterSpacing: -0.5,
-                                            color: Colors.white,
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.w500),
-                                      ),
-                                    ],
+                                    },
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Image.asset(
+                                          'assets/icons/ic_internal.png',
+                                          width: 26,
+                                          height: 24,
+                                        ),
+                                        SizedBox(
+                                          width: 15,
+                                        ),
+                                        Text(
+                                          'Internal Network',
+                                          style: TextStyle(
+                                              letterSpacing: -0.5,
+                                              color: Colors.white,
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.w500),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
@@ -195,57 +200,62 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkView> {
                               child: SizedBox(
                                 width: double.infinity,
                                 height: 60,
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    elevation: 0.0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8.0),
+                                child: Semantics(
+                                  value: 'hf_no_number',
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      elevation: 0.0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(8.0),
+                                      ),
+                                      backgroundColor: const Color(0xFF2A82FF),
+                                      padding: EdgeInsets.zero,
                                     ),
-                                    backgroundColor: const Color(0xFF2A82FF),
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                  onPressed: () async {
-                                    try {
-                                      await SocketManager()
-                                          .connect(dotenv.env['BASE_URL']!);
+                                    onPressed: () async {
+                                      try {
+                                        await SocketManager()
+                                            .connect(dotenv.env['BASE_URL']!);
 
-                                      setState(() {
-                                        AppConfig.isExternal = true;
-                                      });
+                                        setState(() {
+                                          AppConfig.isExternal = true;
+                                        });
 
-                                      SharedPreferencesAsync asyncPrefs =
-                                          SharedPreferencesAsync();
-                                      asyncPrefs.setBool(
-                                          'isExternal', AppConfig.isExternal);
-                                    } catch (e) {
-                                      SocketManager()
-                                          .connect(AppConfig.INTERNAL_URL);
-                                      MyToasts().showNormal(
-                                          'External Network Socket Connect Error');
-                                    } finally {
-                                      context.go('/');
-                                    }
-                                  },
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Image.asset(
-                                        'assets/icons/ic_external.png',
-                                        width: 26,
-                                        height: 24,
-                                      ),
-                                      SizedBox(
-                                        width: 15,
-                                      ),
-                                      Text(
-                                        'External Network',
-                                        style: TextStyle(
-                                            letterSpacing: -0.5,
-                                            color: Colors.white,
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.w500),
-                                      ),
-                                    ],
+                                        SharedPreferencesAsync asyncPrefs =
+                                            SharedPreferencesAsync();
+                                        asyncPrefs.setBool(
+                                            'isExternal', AppConfig.isExternal);
+                                      } catch (e) {
+                                        SocketManager()
+                                            .connect(AppConfig.INTERNAL_URL);
+                                        MyToasts().showNormal(
+                                            'External Network Socket Connect Error');
+                                      } finally {
+                                        context.go('/');
+                                      }
+                                    },
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Image.asset(
+                                          'assets/icons/ic_external.png',
+                                          width: 26,
+                                          height: 24,
+                                        ),
+                                        SizedBox(
+                                          width: 15,
+                                        ),
+                                        Text(
+                                          'External Network',
+                                          style: TextStyle(
+                                              letterSpacing: -0.5,
+                                              color: Colors.white,
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.w500),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),

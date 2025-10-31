@@ -52,6 +52,8 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await LepsiRwSpeechRecognizer.restoreCommands();
       rw();
+      await Future.delayed(const Duration(seconds: 1));
+      rw();
 
       bool? changeNetworkCreateRoomValue =
           ref.read(changeNetworkCreateRoomViewModelProvider);

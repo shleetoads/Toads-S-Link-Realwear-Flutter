@@ -289,57 +289,61 @@ class _InternalIpDialogState extends ConsumerState<InternalIpDialog> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: PrimaryButton(
-                          title: 'Connect',
-                          onTap: () async {
-                            if (ipEditingController.text.isEmpty) {
-                              MyToasts().showNormal('Please enter the IP.');
-                              return;
-                            }
+                        child: Semantics(
+                          value: 'hf_no_number',
+                          child: PrimaryButton(
+                            title: 'Connect',
+                            onTap: () async {
+                              if (ipEditingController.text.isEmpty) {
+                                MyToasts().showNormal('Please enter the IP.');
+                                return;
+                              }
 
-                            if (portEditingController.text.isEmpty) {
-                              MyToasts().showNormal('Please enter the Port.');
-                              return;
-                            }
-
-                            if (widget.isInRoom) {
-                              await widget.leaveFunc!();
-                            }
-
-                            try {
-                              SocketManager().getSocket().disconnect();
-
-                              await SocketManager().connect(
-                                  '${ipEditingController.text}:${portEditingController.text}');
-
-                              setState(() {
-                                AppConfig.isExternal = false;
-
-                                AppConfig.INTERNAL_URL =
-                                    '${ipEditingController.text}:${portEditingController.text}';
-                              });
-
-                              final SharedPreferencesAsync asyncPrefs =
-                                  SharedPreferencesAsync();
-
-                              asyncPrefs.setString(
-                                  'internalURL', AppConfig.INTERNAL_URL);
-
-                              asyncPrefs.setBool(
-                                  'isExternal', AppConfig.isExternal);
-
-                              nextFunc();
-                            } catch (e) {
-                              SocketManager().connect(dotenv.env['BASE_URL']!);
-
-                              MyToasts().showNormal(
-                                  'Internal Network Socket Connect Error');
+                              if (portEditingController.text.isEmpty) {
+                                MyToasts().showNormal('Please enter the Port.');
+                                return;
+                              }
 
                               if (widget.isInRoom) {
-                                context.go('/conference');
+                                await widget.leaveFunc!();
                               }
-                            }
-                          },
+
+                              try {
+                                SocketManager().getSocket().disconnect();
+
+                                await SocketManager().connect(
+                                    '${ipEditingController.text}:${portEditingController.text}');
+
+                                setState(() {
+                                  AppConfig.isExternal = false;
+
+                                  AppConfig.INTERNAL_URL =
+                                      '${ipEditingController.text}:${portEditingController.text}';
+                                });
+
+                                final SharedPreferencesAsync asyncPrefs =
+                                    SharedPreferencesAsync();
+
+                                asyncPrefs.setString(
+                                    'internalURL', AppConfig.INTERNAL_URL);
+
+                                asyncPrefs.setBool(
+                                    'isExternal', AppConfig.isExternal);
+
+                                nextFunc();
+                              } catch (e) {
+                                SocketManager()
+                                    .connect(dotenv.env['BASE_URL']!);
+
+                                MyToasts().showNormal(
+                                    'Internal Network Socket Connect Error');
+
+                                if (widget.isInRoom) {
+                                  context.go('/conference');
+                                }
+                              }
+                            },
+                          ),
                         ),
                       ),
                     ],
@@ -348,6 +352,49 @@ class _InternalIpDialogState extends ConsumerState<InternalIpDialog> {
                 const SizedBox(
                   height: 20,
                 ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Image.asset(
+                        'assets/icons/ic_voice.png',
+                        width: 30,
+                        height: 30,
+                      ),
+                      SizedBox(
+                        width: 5,
+                      ),
+                      Text(
+                        'Cancel',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500),
+                      ),
+                      SizedBox(
+                        width: 10,
+                      ),
+                      SizedBox(
+                        width: 120,
+                        height: 50,
+                        child: Semantics(
+                          value: 'hf_no_number',
+                          child: PrimaryButton(
+                            isWhite: true,
+                            title: 'Cancel',
+                            onTap: () {
+                              context.pop();
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  height: 20,
+                )
               ],
             ),
           ),
