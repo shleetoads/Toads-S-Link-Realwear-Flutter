@@ -39,6 +39,7 @@ class DrawViewModel extends StateNotifier<ServerDrawModel?> {
             drawingPosition: data[5],
             sizeX: data[6] is int ? data[6].toDouble() : data[6],
             sizeY: data[7] is int ? data[7].toDouble() : data[7],
+            receiverSocketId: data[8],
           );
         }
       },
@@ -60,6 +61,7 @@ class DrawViewModel extends StateNotifier<ServerDrawModel?> {
             drawingPosition: data[7],
             sizeX: data[3] is int ? data[3].toDouble() : data[3],
             sizeY: data[4] is int ? data[4].toDouble() : data[4],
+            receiverSocketId: data[8],
           );
         }
       },
@@ -81,6 +83,7 @@ class DrawViewModel extends StateNotifier<ServerDrawModel?> {
             drawingPosition: data[1],
             sizeX: null,
             sizeY: null,
+            receiverSocketId: data[2],
           );
         }
       },

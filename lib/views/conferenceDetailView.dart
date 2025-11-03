@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -68,10 +71,11 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
   bool _localUserJoined =
       false; // Indicates whether the local user has joined the channel
   late RtcEngine _engine; // The RtcEngine instances
-
+  late MediaEngine _mediaEngine;
   final bool _myANC = true;
   bool _myAudio = true;
   bool isFlash = false;
+  bool isAmp = false;
 
   bool _showChat = false;
 
@@ -88,6 +92,8 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
   final _screenshotController = ScreenshotController();
 
   bool localKr = true;
+
+  final double _scaleSize = 35;
 
   inputDrawPoint(
       ServerDrawModel next, GlobalKey key, List<DrawModel> drawModelList) {
@@ -226,7 +232,9 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
       '배율 5',
       'Zoom Five',
       '뒤로가기',
-      'Navigate Back'
+      'Navigate Back',
+      '네트워크 전환',
+      'Change Network',
     ], (command) async {
       logger.i(command);
       switch (command) {
@@ -397,6 +405,20 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
             _scale = 5.0;
           });
           await _engine.setCameraZoomFactor(_scale);
+          break;
+
+        case '네트워크 전환':
+        case 'Change Network':
+          context.push(
+            '/dialog/network?isInRoom=true',
+            extra: () async {
+              await _leaveFunc();
+            },
+          ).then(
+            (value) {
+              rw();
+            },
+          );
           break;
       }
     });
@@ -616,7 +638,7 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
       dimensions: VideoDimensions(
           width: _videoDimensionsWidth, height: _videoDimensionsHeight),
       frameRate: 15,
-      // codecType: VideoCodecType.videoCodecH265,
+      codecType: VideoCodecType.videoCodecAv1,
       // bitrate: 500, // 비트레이트
     ));
     // Enable the video module
@@ -650,6 +672,8 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
 
     await _engine.setAINSMode(
         enabled: _myANC, mode: AudioAinsMode.ainsModeBalanced);
+
+    _mediaEngine = _engine.getMediaEngine();
 
     afterAgora();
 
@@ -755,6 +779,7 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
                 ),
               ),
             ),
+            zoomWidget(),
             AnimatedPositioned(
               duration: const Duration(milliseconds: 300), // 애니메이션 지속 시간
               curve: Curves.easeInOut, // 애니메이션 효과
@@ -977,38 +1002,77 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
                               ),
                             ),
                           ),
-                          SizedBox(
-                            width: 5,
-                          ),
-                          VerticalDivider(
-                            thickness: 2,
-                            indent: 20,
-                            endIndent: 20,
-                            color: Color(0xFF666666),
-                          ),
-                          SizedBox(
-                            width: 15,
-                          ),
-                          Row(
-                            children: [
-                              Text(
-                                localKr ? '배율' : 'Zoom',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: localKr ? 22 : 20,
-                                    fontWeight: FontWeight.w500),
-                              ),
-                              SizedBox(
-                                width: 10,
-                              ),
-                              for (int i = 0; i < 5; i++) ...[
-                                scaleWidget(i + 1),
-                                SizedBox(
-                                  width: 10,
+                          Semantics(
+                            value: 'hf_no_number',
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.translucent,
+                              onTap: () {
+                                setState(() {
+                                  isAmp = !isAmp;
+                                });
+                              },
+                              child: Semantics(
+                                value: 'hf_no_number',
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 20),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Image.asset(
+                                        'assets/icons/ic_megaphone.png',
+                                        width: 25,
+                                        height: 25,
+                                      ),
+                                      SizedBox(
+                                        height: 15,
+                                      ),
+                                      Text(
+                                        localKr
+                                            ? '증폭 ${isAmp ? '끄기' : '켜기'}'
+                                            : 'Amplification ${isAmp ? 'Off' : 'On'}',
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: localKr ? 18 : 16,
+                                            fontWeight: FontWeight.w600),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ]
-                            ],
-                          )
+                              ),
+                            ),
+                          ),
+                          // SizedBox(
+                          //   width: 5,
+                          // ),
+                          // VerticalDivider(
+                          //   thickness: 2,
+                          //   indent: 20,
+                          //   endIndent: 20,
+                          //   color: Color(0xFF666666),
+                          // ),
+                          // SizedBox(
+                          //   width: 15,
+                          // ),
+                          // Row(
+                          //   children: [
+                          //     Text(
+                          //       localKr ? '배율' : 'Zoom',
+                          //       style: TextStyle(
+                          //           color: Colors.white,
+                          //           fontSize: localKr ? 22 : 20,
+                          //           fontWeight: FontWeight.w500),
+                          //     ),
+                          //     SizedBox(
+                          //       width: 10,
+                          //     ),
+                          //     for (int i = 0; i < 5; i++) ...[
+                          //       scaleWidget(i + 1),
+                          //       SizedBox(
+                          //         width: 10,
+                          //       ),
+                          //     ]
+                          //   ],
+                          // )
                         ],
                       )),
                 ],
@@ -1165,6 +1229,10 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
                             extra: () async {
                               await _leaveFunc();
                             },
+                          ).then(
+                            (value) {
+                              rw();
+                            },
                           );
                         },
                         child: Semantics(
@@ -1188,7 +1256,7 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
                                   width: 5,
                                 ),
                                 Text(
-                                  'Change Network',
+                                  localKr ? '네트워크 전환' : 'Change Network',
                                   style: TextStyle(
                                       color: Colors.white,
                                       fontSize: localKr ? 18 : 16,
@@ -1343,6 +1411,63 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget zoomWidget() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        color: Colors.transparent,
+        padding: EdgeInsets.all(10),
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF323232).withOpacity(0.8),
+            borderRadius: BorderRadius.circular(50),
+          ),
+          padding: EdgeInsets.all(3),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (int i = 1; i <= 5; i++) ...[
+                GestureDetector(
+                  onTap: () async {
+                    setState(() {
+                      _scale = i.toDouble();
+                    });
+
+                    await _engine.setCameraZoomFactor(_scale);
+                  },
+                  child: Container(
+                    width: _scaleSize,
+                    height: _scaleSize,
+                    decoration: BoxDecoration(
+                        color: _scale == i.toDouble()
+                            ? const Color(0xFFF2F2F2).withOpacity(0.42)
+                            : Colors.transparent,
+                        shape: BoxShape.circle),
+                    child: Center(
+                      child: Text(
+                        '${i}x',
+                        style: TextStyle(
+                          color: _scale == i.toDouble()
+                              ? Colors.white
+                              : const Color(0xFFA5A5A5),
+                          fontSize: 17,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  height: 5,
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -1511,18 +1636,149 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
     );
   }
 
+  bool sinkRecord = false;
+
+  List<int> collectedPcmData = []; // 모든 PCM 바이트를 저장할 리스트
+  int sampleRate = 48000;
+  int numberOfChannels = 1;
+  int bitsPerSample = 16; // Agora SDK는 보통 16비트를 사용합니다.
+
+  AudioFrameObserver? afo;
+  AudioEncodedFrameObserver? aefo;
+
+  Future<void> startRecording() async {
+    print('1');
+    // 저장 경로 만들기
+    Directory dir = await getApplicationDocumentsDirectory();
+
+    print(dir.path);
+
+    // outputFile = File('${dir.path}/remote_audio.aac');
+    // _sink = outputFile.openWrite();
+
+    // Agora observer 등록
+
+    afo = AudioFrameObserver(
+      onPlaybackAudioFrame: (channelId, audioFrame) {
+        collectedPcmData.addAll(audioFrame.buffer!.toList());
+      },
+    );
+
+    _mediaEngine.registerAudioFrameObserver(afo!);
+
+    aefo = AudioEncodedFrameObserver(
+      onPlaybackAudioEncodedFrame:
+          (frameBuffer, length, audioEncodedFrameInfo) {
+        sampleRate = audioEncodedFrameInfo.sampleRateHz!;
+        numberOfChannels = audioEncodedFrameInfo.numberOfChannels!;
+
+        // print(audioEncodedFrameInfo.sampleRateHz!);
+        // print(audioEncodedFrameInfo.numberOfChannels!);
+      },
+      // 다른 콜백은 무시
+      onMixedAudioEncodedFrame: (_, __, ___) {},
+      onRecordAudioEncodedFrame: (_, __, ___) {},
+    );
+
+    _engine.registerAudioEncodedFrameObserver(
+      observer: aefo!,
+      config: const AudioEncodedFrameObserverConfig(
+        postionType: AudioEncodedFrameObserverPosition
+            .audioEncodedFrameObserverPositionPlayback, // 상대방 소리
+      ),
+    );
+
+    // setState(() {
+    //   sinkRecord = true;
+    // });
+  }
+
+  Future<void> stopRecording() async {
+    // setState(() {
+    //   sinkRecord = false;
+    // });
+
+    if (afo != null) _mediaEngine.unregisterAudioFrameObserver(afo!);
+    if (aefo != null) _engine.unregisterAudioEncodedFrameObserver(aefo!);
+
+    Directory directory = await getApplicationDocumentsDirectory();
+
+    await saveCollectedPcmToWav('${directory.path}/remote_audio.wav');
+
+    // await convertRawAacToM4a(
+    //     '${dir.path}/remote_audio.aac', '${dir.path}/remote_audio.m4a');
+
+    // final params = ShareParams(
+    //   text: 'Great picture',
+    //   files: [XFile('${directory.path}/remote_audio.wav')],
+    // );
+
+    // final result = await SharePlus.instance.share(params);
+  }
+
+  Future<void> saveCollectedPcmToWav(String outputPath) async {
+    if (collectedPcmData.isEmpty) {
+      print('오디오 데이터 또는 메타데이터가 수집되지 않았습니다.');
+      return;
+    }
+
+    final pcmBytes = Uint8List.fromList(collectedPcmData);
+    final pcmLength = pcmBytes.length;
+
+    // WAV 헤더 계산
+    final channels = numberOfChannels;
+    final rate = sampleRate;
+    final bits = bitsPerSample;
+    final byteRate = (rate * channels * bits) ~/ 8;
+    final blockAlign = (channels * bits) ~/ 8;
+
+    final header = ByteData(44);
+
+    // RIFF 청크
+    header.setUint32(0, 0x46464952, Endian.little); // 'RIFF'
+    header.setUint32(
+        4, pcmLength + 36, Endian.little); // File Size (전체 파일 크기 - 8)
+    header.setUint32(8, 0x45564157, Endian.little); // 'WAVE'
+
+    // 'fmt ' 서브 청크
+    header.setUint32(12, 0x20746D66, Endian.little); // 'fmt '
+    header.setUint32(16, 16, Endian.little); // Subchunk1 Size (PCM의 경우 16)
+    header.setUint16(20, 1, Endian.little); // Audio Format (PCM = 1)
+    header.setUint16(22, channels, Endian.little); // Num Channels
+    header.setUint32(24, rate, Endian.little); // Sample Rate
+    header.setUint32(28, byteRate, Endian.little); // Byte Rate
+    header.setUint16(32, blockAlign, Endian.little); // Block Align
+    header.setUint16(34, bits, Endian.little); // Bits Per Sample
+
+    // 'data' 서브 청크
+    header.setUint32(36, 0x61746164, Endian.little); // 'data'
+    header.setUint32(40, pcmLength, Endian.little); // Data Size (PCM 데이터 길이)
+
+    // 파일에 헤더와 데이터를 순서대로 작성
+    final file = File(outputPath);
+    await file.writeAsBytes(header.buffer.asUint8List(), mode: FileMode.write);
+    await file.writeAsBytes(pcmBytes, mode: FileMode.append);
+
+    print('✅ WAV 파일 저장 완료: $outputPath');
+
+    // 다음 녹음을 위해 데이터 초기화
+    collectedPcmData.clear();
+  }
+
   _record() async {
     if (!_recordLoading) {
       setState(() {
         _recordLoading = true;
       });
       if (!_recording) {
-        const uuid = Uuid();
+        // const uuid = Uuid();
 
-        _recording =
-            await FlutterScreenRecording.startRecordScreenAndAudio(uuid.v4());
+        _recording = await FlutterScreenRecording.startRecordScreenAndAudio(
+            _getSaveFileName());
 
         logger.i(_recording);
+
+        await startRecording();
 
         if (_recording) {
           _recordTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -1539,36 +1795,7 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
 
         logger.i(path);
 
-        //storage/emulated/0/Android/data/com.toads.toadsslink.flutter/cache/739e716b-c4a4-42b8-93af-d2c946444975.mp4
-
-        //IOS는 document폴더에 알아서 저장 android도 저장되는거 같은데 그거 삭제하고 외부에 저장
-        if (Platform.isAndroid) {
-          Directory directory = Directory(dotenv.env['AOS_DCIM_PATH']!);
-
-          if (!directory.existsSync()) {
-            await directory.create(recursive: true);
-          }
-
-          File tempFile = File(path);
-          File resultFile = File('${directory.path}/${p.basename(path)}');
-
-          //카피해주고 기존꺼 지우고
-
-          resultFile.writeAsBytesSync(tempFile.readAsBytesSync());
-          Directory(tempFile.path).deleteSync(recursive: true);
-
-          if (Platform.isAndroid) {
-            const MethodChannel channel = MethodChannel('ToadsSLink');
-            await channel
-                .invokeMethod('refreshMedia', {"path": resultFile.path});
-          }
-
-          logger.i(resultFile.path);
-
-          MyToasts().showNormal("Saved in '${resultFile.path}'");
-        } else {
-          MyToasts().showNormal("Saved in '$path'");
-        }
+        await stopRecording();
 
         setState(() {
           _recordTimer?.cancel();
@@ -1577,11 +1804,84 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
 
           _recording = false;
         });
+
+        //storage/emulated/0/Android/data/com.toads.toadsslink.flutter/cache/739e716b-c4a4-42b8-93af-d2c946444975.mp4
+
+        Directory directory = await getApplicationDocumentsDirectory();
+
+        File tempFile = File(path);
+        File resultFile = File('${directory.path}/${p.basename(path)}');
+
+        //카피해주고 기존꺼 지우고
+
+        resultFile.writeAsBytesSync(tempFile.readAsBytesSync());
+        Directory(tempFile.path).deleteSync(recursive: true);
+
+        String? mergeFile = await mergeAudioAndVideo(
+            resultFile.path, '${directory.path}/remote_audio.wav');
+
+        if (Platform.isAndroid) {
+          const MethodChannel channel = MethodChannel('ToadsSLink');
+          await channel.invokeMethod('refreshMedia', {"path": mergeFile});
+        }
+
+        logger.i(resultFile.path);
+
+        MyToasts().showNormal("Saved in '${resultFile.path}'");
       }
 
       setState(() {
         _recordLoading = false;
       });
+    }
+  }
+
+  Future<String?> mergeAudioAndVideo(String videoPath, String audioPath) async {
+    // 1. 출력 파일 경로 설정
+    Directory directory;
+
+    if (Platform.isAndroid) {
+      directory = Directory(dotenv.env['AOS_DCIM_PATH']!);
+
+      if (!directory.existsSync()) {
+        await directory.create(recursive: true);
+      }
+    } else {
+      directory = await getApplicationDocumentsDirectory();
+    }
+
+    final String outputFilePath =
+        '${directory.path}/Toads S-Link_${DateTime.now().millisecondsSinceEpoch}.mp4';
+
+    // 2. FFmpeg 명령어 구성
+    // -y 옵션: 파일이 이미 존재하면 덮어쓰기 (자동 확인)
+    final String command = '-i "$videoPath" '
+        '-i "$audioPath" '
+        '-filter_complex "[0:a][1:a]amix=inputs=2:duration=first[a]" '
+        '-map 0:v:0 '
+        '-map "[a]" '
+        '-c:v copy '
+        '-c:a aac '
+        '-b:a 192k '
+        '-y "$outputFilePath"'; // 최종 출력 파일
+
+    print('FFmpeg Command: $command');
+
+    // 3. FFmpeg 실행
+    final session = await FFmpegKit.execute(command);
+    final returnCode = await session.getReturnCode();
+
+    if (ReturnCode.isSuccess(returnCode)) {
+      print('✅ 비디오/오디오 병합 성공: $outputFilePath');
+      return outputFilePath;
+    } else if (ReturnCode.isCancel(returnCode)) {
+      print('❌ 비디오/오디오 병합 취소');
+      return null;
+    } else {
+      // 에러 로그 확인
+      final log = await session.getAllLogsAsString();
+      print('❌ 비디오/오디오 병합 실패. 로그:\n$log');
+      return null;
     }
   }
 

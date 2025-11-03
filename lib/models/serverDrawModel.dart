@@ -9,6 +9,8 @@ class ServerDrawModel {
   String? drawingPosition;
   double? sizeX;
   double? sizeY;
+  //내부망전용
+  String? receiverSocketId;
 
   ServerDrawModel(
       {required this.meetId,
@@ -19,7 +21,8 @@ class ServerDrawModel {
       required this.senderSocketId,
       required this.drawingPosition,
       required this.sizeX,
-      required this.sizeY});
+      required this.sizeY,
+      this.receiverSocketId});
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
@@ -32,7 +35,7 @@ class ServerDrawModel {
     data['drawingPosition'] = drawingPosition;
     data['sizeX'] = sizeX;
     data['sizeY'] = sizeY;
-
+    if (receiverSocketId != null) data['receiverSocketId'] = receiverSocketId;
     return data;
   }
 }

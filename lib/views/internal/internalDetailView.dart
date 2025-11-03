@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screen_recording/flutter_screen_recording.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lepsi_rw_speech_recognizer/lepsi_rw_speech_recognizer.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:realwear_flutter/dataSource/socketManager.dart';
 import 'package:realwear_flutter/models/authModel.dart';
@@ -143,7 +144,7 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
   void initState() {
     localKr = ref.read(localeViewModelProvider) == 'KOR';
 
-    // rw();
+    rw();
 
     initWebRtc();
 
@@ -160,6 +161,176 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
         });
       },
     );
+  }
+
+  rw() {
+    LepsiRwSpeechRecognizer.setCommands(<String>[
+      '방 나가기',
+      'Leave Room',
+      '초대하기',
+      'Invite',
+      '플래시 켜기',
+      'Flash On',
+      '플래시 끄기',
+      'Flash Off',
+      '화면녹화 켜기',
+      'Screen Recording On',
+      '화면녹화 끄기',
+      'Screen Recording Off',
+      '메뉴 열기',
+      'Show Menu',
+      '메뉴 닫기',
+      'Hide Menu',
+      '마이크 켜기',
+      'Mike On',
+      '마이크 끄기',
+      'Mike Off',
+      '사진 저장',
+      'Capture',
+      '채팅 켜기',
+      'Chat On',
+      '채팅 끄기',
+      'Chat Off',
+      '뒤로가기',
+      'Navigate Back',
+      '네트워크 전환',
+      'Change Network',
+    ], (command) async {
+      logger.i(command);
+      switch (command) {
+        case '방 나가기':
+        case '뒤로가기':
+        case 'Leave Room':
+        case 'Navigate Back':
+          _leaveFunc();
+          break;
+        case '초대하기':
+        case 'Invite':
+          await LepsiRwSpeechRecognizer.restoreCommands();
+          ConferenceModel? model = ref.read(conferenceViewModelProvider);
+          AuthModel authModel = ref.read(authViewModelProvider)!;
+          ref
+              .read(inviteMemberInViewModelProvider.notifier)
+              .getUninviteMemberList(
+                meetId: model!.meetId!,
+                companyNo: authModel.companyNo!,
+                successFunc: () {
+                  context.push('/invite/in', extra: {
+                    'meetId': model.meetId,
+                    'subject': model.subject,
+                  }).then(
+                    (value) async {
+                      if (value == null) {
+                        await Future.delayed(const Duration(milliseconds: 500));
+                        rw();
+                      }
+                    },
+                  );
+                },
+              );
+
+          break;
+        case '플래시 켜기':
+        case 'Flash On':
+          if (isFlash) {
+            break;
+          }
+          flash();
+          await Future.delayed(const Duration(milliseconds: 1500));
+          rw();
+          break;
+        case '플래시 끄기':
+        case 'Flash Off':
+          if (!isFlash) {
+            break;
+          }
+          flash();
+          break;
+        case '화면녹화 켜기':
+        case 'Screen Recording On':
+          if (_recording) {
+            break;
+          }
+          _record();
+          break;
+        case '화면녹화 끄기':
+        case 'Screen Recording Off':
+          if (!_recording) {
+            break;
+          }
+          _record();
+          break;
+        case '메뉴 열기':
+        case 'Show Menu':
+          setState(() {
+            _isMenuVisible = true;
+          });
+          break;
+        case '메뉴 닫기':
+        case 'Hide Menu':
+          setState(() {
+            _isMenuVisible = false;
+          });
+          break;
+
+        case '마이크 켜기':
+        case 'Mike On':
+          if (_myAudio) {
+            break;
+          }
+          setState(() {
+            _myAudio = !_myAudio;
+            // if (!_myAudio) _myVad = false;
+            _localStream?.getAudioTracks().forEach((track) {
+              track.enabled = _myAudio;
+            });
+          });
+          break;
+        case '마이크 끄기':
+        case 'Mike Off':
+          if (!_myAudio) {
+            break;
+          }
+          setState(() {
+            _myAudio = !_myAudio;
+            // if (!_myAudio) _myVad = false;
+            _localStream?.getAudioTracks().forEach((track) {
+              track.enabled = _myAudio;
+            });
+          });
+          break;
+        case '사진 저장':
+        case 'Capture':
+          capture();
+          break;
+        case '채팅 켜기':
+        case 'Chat On':
+          setState(() {
+            _showChat = true;
+          });
+          break;
+        case '채팅 끄기':
+        case 'Chat Off':
+          setState(() {
+            _showChat = false;
+          });
+          break;
+
+        case '네트워크 전환':
+        case 'Change Network':
+          context.push(
+            '/dialog/network?isInRoom=true',
+            extra: () async {
+              await _leaveFunc();
+            },
+          ).then(
+            (value) {
+              rw();
+            },
+          );
+          break;
+      }
+    });
   }
 
   String? mySocketId = SocketManager().getSocket().id;
@@ -192,7 +363,8 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
     ref.listen(
       drawViewModelProvider,
       (previous, next) {
-        if (next != null) {
+        if (next != null &&
+            next.receiverSocketId == SocketManager().getSocket().id) {
           switch (next.drawingPosition) {
             case 'SHARING':
               inputDrawPoint(next, _screenSizeKey, _drawPoints);
@@ -219,21 +391,29 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
                               AlwaysStoppedAnimation<Color>(Color(0xFF4A90DC)),
                         ),
                       )
-                    : Screenshot(
-                        controller: _screenshotController,
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final double width = constraints.maxWidth;
-                            final double height = constraints.maxHeight;
+                    : AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: Screenshot(
+                          controller: _screenshotController,
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final double width = constraints.maxWidth;
+                              final double height = constraints.maxHeight;
 
-                            return CustomPaint(
-                              foregroundPainter: SignaturePainter(_drawPoints),
-                              size: Size(width, height), // 크기를 제한
-                              child: RTCVideoView(
-                                localRenderer!,
-                              ),
-                            );
-                          },
+                              return RepaintBoundary(
+                                child: CustomPaint(
+                                  isComplex: true,
+                                  willChange: false,
+                                  foregroundPainter:
+                                      SignaturePainter(_drawPoints),
+                                  size: Size(width, height), // 크기를 제한
+                                  child: RTCVideoView(
+                                    localRenderer!,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       ),
               ),
@@ -586,6 +766,10 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
                             extra: () async {
                               await _leaveFunc();
                             },
+                          ).then(
+                            (value) {
+                              rw();
+                            },
                           );
                         },
                         child: Semantics(
@@ -609,7 +793,7 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
                                   width: 5,
                                 ),
                                 Text(
-                                  'Change Network',
+                                  localKr ? '네트워크 전환' : 'Change Network',
                                   style: TextStyle(
                                       color: Colors.white,
                                       fontSize: localKr ? 18 : 16,
@@ -1326,16 +1510,19 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
       case AppLifecycleState.resumed:
         // 💡 앱이 포그라운드로 돌아왔을 때
         // 멈춘 스트림을 재개하는 로직을 실행합니다.
+        logger.i('resumed');
         _resumeWebRTCStream();
         break;
       case AppLifecycleState.inactive:
         // 💡 비활성화(iOS/Android 백그라운드 진입 직전) 상태
         // 필요한 경우 일시 정지 로직을 추가할 수 있습니다.
+        logger.i('inactive');
 
         break;
       case AppLifecycleState.paused:
         // 💡 앱이 백그라운드 상태가 되었을 때
         // Android에서는 여기서 포그라운드 서비스 시작 등을 고려합니다.
+        logger.i('paused');
 
         break;
       case AppLifecycleState.detached:

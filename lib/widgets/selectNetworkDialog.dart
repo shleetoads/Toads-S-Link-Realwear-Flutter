@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lepsi_rw_speech_recognizer/lepsi_rw_speech_recognizer.dart';
 import 'package:realwear_flutter/dataSource/socketManager.dart';
 import 'package:realwear_flutter/utils/appConfig.dart';
 import 'package:realwear_flutter/utils/myToasts.dart';
@@ -9,6 +10,7 @@ import 'package:realwear_flutter/viewModels/authViewModel.dart';
 import 'package:realwear_flutter/viewModels/changeNetworkCreateRoomViewModel.dart';
 import 'package:realwear_flutter/viewModels/conferenceListViewModel.dart';
 import 'package:realwear_flutter/viewModels/inviteMemberViewModel.dart';
+import 'package:realwear_flutter/viewModels/localeViewModel.dart';
 import 'package:realwear_flutter/widgets/primaryButton.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -24,6 +26,112 @@ class SelectNetworkDialog extends ConsumerStatefulWidget {
 }
 
 class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
+  bool localKr = false;
+
+  @override
+  void initState() {
+    localKr = ref.read(localeViewModelProvider) == 'KOR';
+    rw();
+    super.initState();
+  }
+
+  rw() {
+    LepsiRwSpeechRecognizer.setCommands(<String>[
+      'Internal Network',
+      '내부 네트워크',
+      'External Network',
+      '외부 네트워크',
+      'Cancel',
+      '취소'
+    ], (command) async {
+      logger.i(command);
+
+      switch (command) {
+        case 'Cancel':
+        case '취소':
+          context.pop();
+          break;
+        case 'External Network':
+        case '외부 네트워크':
+          goExternal();
+          break;
+        case 'Internal Network':
+        case '내부 네트워크':
+          goInternal();
+          break;
+      }
+    });
+  }
+
+  goInternal() async {
+    final SharedPreferencesAsync asyncPrefs = SharedPreferencesAsync();
+    String? url = await asyncPrefs.getString('internalURL');
+    if (url == null) {
+      context
+          .push('/dialog/internal/ip?isInRoom=${widget.isInRoom}',
+              extra: widget.leaveFunc)
+          .then(
+        (value) {
+          rw();
+        },
+      );
+      // showDialog(
+      //   context: context,
+      //   builder: (context) => InternalIpDialog(
+      //     isInRoom: widget.isInRoom,
+      //     leaveFunc: widget.leaveFunc,
+      //   ),
+      // );
+    } else {
+      if (widget.isInRoom) {
+        await widget.leaveFunc!();
+      }
+
+      try {
+        SocketManager().getSocket().disconnect();
+
+        await SocketManager().connect(url);
+
+        setState(() {
+          AppConfig.INTERNAL_URL = url;
+          AppConfig.isExternal = false;
+        });
+
+        SharedPreferencesAsync asyncPrefs = SharedPreferencesAsync();
+        asyncPrefs.setBool('isExternal', AppConfig.isExternal);
+
+        internalNextFunc();
+      } catch (e) {
+        SocketManager().connect(dotenv.env['BASE_URL']!);
+        MyToasts().showNormal('Internal Network Socket Connect Error');
+      }
+    }
+  }
+
+  goExternal() async {
+    if (widget.isInRoom) {
+      await widget.leaveFunc!();
+    }
+    try {
+      bool prevNetwork = AppConfig.isExternal;
+
+      SocketManager().getSocket().disconnect();
+      await SocketManager().connect(dotenv.env['BASE_URL']!);
+
+      setState(() {
+        AppConfig.isExternal = true;
+      });
+
+      SharedPreferencesAsync asyncPrefs = SharedPreferencesAsync();
+      asyncPrefs.setBool('isExternal', AppConfig.isExternal);
+
+      externalNextFunc(prevNetwork);
+    } catch (e) {
+      SocketManager().connect(AppConfig.INTERNAL_URL);
+      MyToasts().showNormal('External Network Socket Connect Error');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -46,7 +154,7 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
                 const SizedBox(
                   height: 20,
                 ),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20),
                   child: Text(
                     'Select Network',
@@ -93,51 +201,7 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
                                 backgroundColor: const Color(0xFF2A82FF),
                                 padding: EdgeInsets.zero,
                               ),
-                              onPressed: () async {
-                                final SharedPreferencesAsync asyncPrefs =
-                                    SharedPreferencesAsync();
-                                String? url =
-                                    await asyncPrefs.getString('internalURL');
-                                if (url == null) {
-                                  context.push(
-                                      '/dialog/internal/ip?isInRoom=${widget.isInRoom}',
-                                      extra: widget.leaveFunc);
-                                  // showDialog(
-                                  //   context: context,
-                                  //   builder: (context) => InternalIpDialog(
-                                  //     isInRoom: widget.isInRoom,
-                                  //     leaveFunc: widget.leaveFunc,
-                                  //   ),
-                                  // );
-                                } else {
-                                  if (widget.isInRoom) {
-                                    await widget.leaveFunc!();
-                                  }
-
-                                  try {
-                                    SocketManager().getSocket().disconnect();
-
-                                    await SocketManager().connect(url);
-
-                                    setState(() {
-                                      AppConfig.INTERNAL_URL = url;
-                                      AppConfig.isExternal = false;
-                                    });
-
-                                    SharedPreferencesAsync asyncPrefs =
-                                        SharedPreferencesAsync();
-                                    asyncPrefs.setBool(
-                                        'isExternal', AppConfig.isExternal);
-
-                                    internalNextFunc();
-                                  } catch (e) {
-                                    SocketManager()
-                                        .connect(dotenv.env['BASE_URL']!);
-                                    MyToasts().showNormal(
-                                        'Internal Network Socket Connect Error');
-                                  }
-                                }
-                              },
+                              onPressed: goInternal,
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -150,7 +214,7 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
                                     width: 15,
                                   ),
                                   Text(
-                                    'Internal Network',
+                                    localKr ? '내부 네트워크' : 'Internal Network',
                                     style: TextStyle(
                                         letterSpacing: -0.5,
                                         color: Colors.white,
@@ -181,34 +245,7 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
                                 backgroundColor: const Color(0xFF2A82FF),
                                 padding: EdgeInsets.zero,
                               ),
-                              onPressed: () async {
-                                if (widget.isInRoom) {
-                                  await widget.leaveFunc!();
-                                }
-                                try {
-                                  bool prevNetwork = AppConfig.isExternal;
-
-                                  SocketManager().getSocket().disconnect();
-                                  await SocketManager()
-                                      .connect(dotenv.env['BASE_URL']!);
-
-                                  setState(() {
-                                    AppConfig.isExternal = true;
-                                  });
-
-                                  SharedPreferencesAsync asyncPrefs =
-                                      SharedPreferencesAsync();
-                                  asyncPrefs.setBool(
-                                      'isExternal', AppConfig.isExternal);
-
-                                  externalNextFunc(prevNetwork);
-                                } catch (e) {
-                                  SocketManager()
-                                      .connect(AppConfig.INTERNAL_URL);
-                                  MyToasts().showNormal(
-                                      'External Network Socket Connect Error');
-                                }
-                              },
+                              onPressed: goExternal,
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -221,7 +258,7 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
                                     width: 15,
                                   ),
                                   Text(
-                                    'External Network',
+                                    localKr ? '외부 네트워크' : 'External Network',
                                     style: TextStyle(
                                         letterSpacing: -0.5,
                                         color: Colors.white,
@@ -245,24 +282,6 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Image.asset(
-                        'assets/icons/ic_voice.png',
-                        width: 30,
-                        height: 30,
-                      ),
-                      SizedBox(
-                        width: 5,
-                      ),
-                      Text(
-                        'Cancel',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500),
-                      ),
-                      SizedBox(
-                        width: 10,
-                      ),
                       SizedBox(
                         width: 120,
                         height: 50,
@@ -270,7 +289,7 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
                           value: 'hf_no_number',
                           child: PrimaryButton(
                             isWhite: true,
-                            title: 'Cancel',
+                            title: localKr ? '취소' : 'Cancel',
                             onTap: () {
                               context.pop();
                             },

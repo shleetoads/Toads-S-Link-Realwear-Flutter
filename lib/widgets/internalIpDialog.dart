@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lepsi_rw_speech_recognizer/lepsi_rw_speech_recognizer.dart';
 import 'package:realwear_flutter/dataSource/socketManager.dart';
 import 'package:realwear_flutter/utils/appConfig.dart';
 import 'package:realwear_flutter/utils/myColors.dart';
@@ -11,6 +12,7 @@ import 'package:realwear_flutter/viewModels/authViewModel.dart';
 import 'package:realwear_flutter/viewModels/changeNetworkCreateRoomViewModel.dart';
 import 'package:realwear_flutter/viewModels/conferenceListViewModel.dart';
 import 'package:realwear_flutter/viewModels/inviteMemberViewModel.dart';
+import 'package:realwear_flutter/viewModels/localeViewModel.dart';
 import 'package:realwear_flutter/widgets/primaryButton.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -26,12 +28,55 @@ class InternalIpDialog extends ConsumerStatefulWidget {
 
 class _InternalIpDialogState extends ConsumerState<InternalIpDialog> {
   final TextEditingController ipEditingController =
-      TextEditingController(text: 'http://192.168.50.190');
+      TextEditingController(text: 'http://192.168.50.7');
   final TextEditingController portEditingController =
       TextEditingController(text: '5000');
 
   final ipFocus = FocusNode();
   final portFocus = FocusNode();
+
+  bool localKr = false;
+
+  @override
+  void initState() {
+    localKr = ref.read(localeViewModelProvider) == 'KOR';
+    rw();
+    super.initState();
+  }
+
+  rw() {
+    LepsiRwSpeechRecognizer.setCommands(<String>[
+      'IP Input',
+      '아이피 입력',
+      'Port Input',
+      '포트 입력',
+      'Cancel',
+      '취소',
+      'Connect',
+      '연결',
+    ], (command) async {
+      logger.i(command);
+
+      switch (command) {
+        case 'Cancel':
+        case '취소':
+          context.pop();
+          break;
+        case 'IP Input':
+        case '아이피 입력':
+          FocusScope.of(context).requestFocus(ipFocus);
+          break;
+        case 'Port Input':
+        case '포트 입력':
+          FocusScope.of(context).requestFocus(portFocus);
+          break;
+        case 'Connect':
+        case '연결':
+          connect();
+          break;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -154,7 +199,7 @@ class _InternalIpDialogState extends ConsumerState<InternalIpDialog> {
                                       width: 10,
                                     ),
                                     Text(
-                                      'IP Input',
+                                      localKr ? '아이피 입력' : 'IP Input',
                                       style: TextStyle(
                                           color: Color(0xFF7D7D7D),
                                           fontSize: 18,
@@ -264,7 +309,7 @@ class _InternalIpDialogState extends ConsumerState<InternalIpDialog> {
                                       width: 10,
                                     ),
                                     Text(
-                                      'Port Input',
+                                      localKr ? '포트 입력' : 'Port Input',
                                       style: TextStyle(
                                           color: Color(0xFF7D7D7D),
                                           fontSize: 18,
@@ -292,57 +337,8 @@ class _InternalIpDialogState extends ConsumerState<InternalIpDialog> {
                         child: Semantics(
                           value: 'hf_no_number',
                           child: PrimaryButton(
-                            title: 'Connect',
-                            onTap: () async {
-                              if (ipEditingController.text.isEmpty) {
-                                MyToasts().showNormal('Please enter the IP.');
-                                return;
-                              }
-
-                              if (portEditingController.text.isEmpty) {
-                                MyToasts().showNormal('Please enter the Port.');
-                                return;
-                              }
-
-                              if (widget.isInRoom) {
-                                await widget.leaveFunc!();
-                              }
-
-                              try {
-                                SocketManager().getSocket().disconnect();
-
-                                await SocketManager().connect(
-                                    '${ipEditingController.text}:${portEditingController.text}');
-
-                                setState(() {
-                                  AppConfig.isExternal = false;
-
-                                  AppConfig.INTERNAL_URL =
-                                      '${ipEditingController.text}:${portEditingController.text}';
-                                });
-
-                                final SharedPreferencesAsync asyncPrefs =
-                                    SharedPreferencesAsync();
-
-                                asyncPrefs.setString(
-                                    'internalURL', AppConfig.INTERNAL_URL);
-
-                                asyncPrefs.setBool(
-                                    'isExternal', AppConfig.isExternal);
-
-                                nextFunc();
-                              } catch (e) {
-                                SocketManager()
-                                    .connect(dotenv.env['BASE_URL']!);
-
-                                MyToasts().showNormal(
-                                    'Internal Network Socket Connect Error');
-
-                                if (widget.isInRoom) {
-                                  context.go('/conference');
-                                }
-                              }
-                            },
+                            title: localKr ? '연결' : 'Connect',
+                            onTap: connect,
                           ),
                         ),
                       ),
@@ -357,24 +353,6 @@ class _InternalIpDialogState extends ConsumerState<InternalIpDialog> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Image.asset(
-                        'assets/icons/ic_voice.png',
-                        width: 30,
-                        height: 30,
-                      ),
-                      SizedBox(
-                        width: 5,
-                      ),
-                      Text(
-                        'Cancel',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500),
-                      ),
-                      SizedBox(
-                        width: 10,
-                      ),
                       SizedBox(
                         width: 120,
                         height: 50,
@@ -382,7 +360,7 @@ class _InternalIpDialogState extends ConsumerState<InternalIpDialog> {
                           value: 'hf_no_number',
                           child: PrimaryButton(
                             isWhite: true,
-                            title: 'Cancel',
+                            title: localKr ? '취소' : 'Cancel',
                             onTap: () {
                               context.pop();
                             },
@@ -401,6 +379,52 @@ class _InternalIpDialogState extends ConsumerState<InternalIpDialog> {
         ),
       ),
     );
+  }
+
+  connect() async {
+    if (ipEditingController.text.isEmpty) {
+      MyToasts().showNormal('Please enter the IP.');
+      return;
+    }
+
+    if (portEditingController.text.isEmpty) {
+      MyToasts().showNormal('Please enter the Port.');
+      return;
+    }
+
+    if (widget.isInRoom) {
+      await widget.leaveFunc!();
+    }
+
+    try {
+      SocketManager().getSocket().disconnect();
+
+      await SocketManager()
+          .connect('${ipEditingController.text}:${portEditingController.text}');
+
+      setState(() {
+        AppConfig.isExternal = false;
+
+        AppConfig.INTERNAL_URL =
+            '${ipEditingController.text}:${portEditingController.text}';
+      });
+
+      final SharedPreferencesAsync asyncPrefs = SharedPreferencesAsync();
+
+      asyncPrefs.setString('internalURL', AppConfig.INTERNAL_URL);
+
+      asyncPrefs.setBool('isExternal', AppConfig.isExternal);
+
+      nextFunc();
+    } catch (e) {
+      SocketManager().connect(dotenv.env['BASE_URL']!);
+
+      MyToasts().showNormal('Internal Network Socket Connect Error');
+
+      if (widget.isInRoom) {
+        context.go('/conference');
+      }
+    }
   }
 
   nextFunc() async {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lepsi_rw_speech_recognizer/lepsi_rw_speech_recognizer.dart';
 import 'package:realwear_flutter/dataSource/socketManager.dart';
 import 'package:realwear_flutter/utils/appConfig.dart';
 import 'package:realwear_flutter/utils/myToasts.dart';
@@ -22,8 +23,77 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkView> {
   @override
   void initState() {
     setTimeoutForNextPage();
-
+    rw();
     super.initState();
+  }
+
+  rw() {
+    LepsiRwSpeechRecognizer.setCommands(<String>[
+      'Internal Network',
+      '내부 네트워크',
+      'External Network',
+      '외부 네트워크',
+    ], (command) async {
+      logger.i(command);
+
+      switch (command) {
+        case 'External Network':
+        case '외부 네트워크':
+          goExternal();
+          break;
+        case 'Internal Network':
+        case '내부 네트워크':
+          goInternal();
+          break;
+      }
+    });
+  }
+
+  goInternal() async {
+    final SharedPreferencesAsync asyncPrefs = SharedPreferencesAsync();
+    String? url = await asyncPrefs.getString('internalURL');
+    if (url == null) {
+      context.push('/internal/ip').then(
+        (value) {
+          rw();
+        },
+      );
+    } else {
+      try {
+        await SocketManager().connect(url);
+
+        setState(() {
+          AppConfig.INTERNAL_URL = url;
+          AppConfig.isExternal = false;
+        });
+
+        SharedPreferencesAsync asyncPrefs = SharedPreferencesAsync();
+        asyncPrefs.setBool('isExternal', AppConfig.isExternal);
+      } catch (e) {
+        SocketManager().connect(dotenv.env['BASE_URL']!);
+        MyToasts().showNormal('Internal Network Socket Connect Error');
+      } finally {
+        context.go('/');
+      }
+    }
+  }
+
+  goExternal() async {
+    try {
+      await SocketManager().connect(dotenv.env['BASE_URL']!);
+
+      setState(() {
+        AppConfig.isExternal = true;
+      });
+
+      SharedPreferencesAsync asyncPrefs = SharedPreferencesAsync();
+      asyncPrefs.setBool('isExternal', AppConfig.isExternal);
+    } catch (e) {
+      SocketManager().connect(AppConfig.INTERNAL_URL);
+      MyToasts().showNormal('External Network Socket Connect Error');
+    } finally {
+      context.go('/');
+    }
   }
 
   setTimeoutForNextPage() async {
@@ -137,36 +207,7 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkView> {
                                       backgroundColor: const Color(0xFF2A82FF),
                                       padding: EdgeInsets.zero,
                                     ),
-                                    onPressed: () async {
-                                      final SharedPreferencesAsync asyncPrefs =
-                                          SharedPreferencesAsync();
-                                      String? url = await asyncPrefs
-                                          .getString('internalURL');
-                                      if (url == null) {
-                                        context.go('/internal/ip');
-                                      } else {
-                                        try {
-                                          await SocketManager().connect(url);
-
-                                          setState(() {
-                                            AppConfig.INTERNAL_URL = url;
-                                            AppConfig.isExternal = false;
-                                          });
-
-                                          SharedPreferencesAsync asyncPrefs =
-                                              SharedPreferencesAsync();
-                                          asyncPrefs.setBool('isExternal',
-                                              AppConfig.isExternal);
-                                        } catch (e) {
-                                          SocketManager()
-                                              .connect(dotenv.env['BASE_URL']!);
-                                          MyToasts().showNormal(
-                                              'Internal Network Socket Connect Error');
-                                        } finally {
-                                          context.go('/');
-                                        }
-                                      }
-                                    },
+                                    onPressed: () async {},
                                     child: Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
@@ -212,28 +253,7 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkView> {
                                       backgroundColor: const Color(0xFF2A82FF),
                                       padding: EdgeInsets.zero,
                                     ),
-                                    onPressed: () async {
-                                      try {
-                                        await SocketManager()
-                                            .connect(dotenv.env['BASE_URL']!);
-
-                                        setState(() {
-                                          AppConfig.isExternal = true;
-                                        });
-
-                                        SharedPreferencesAsync asyncPrefs =
-                                            SharedPreferencesAsync();
-                                        asyncPrefs.setBool(
-                                            'isExternal', AppConfig.isExternal);
-                                      } catch (e) {
-                                        SocketManager()
-                                            .connect(AppConfig.INTERNAL_URL);
-                                        MyToasts().showNormal(
-                                            'External Network Socket Connect Error');
-                                      } finally {
-                                        context.go('/');
-                                      }
-                                    },
+                                    onPressed: goExternal,
                                     child: Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,

@@ -151,6 +151,8 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
       'Join Six',
       'Switch to English',
       'Switch to Korean',
+      '네트워크 전환',
+      'Change Network',
     ], (command) async {
       logger.i(command);
 
@@ -240,6 +242,16 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
         case 'Switch to English':
         case 'Switch to Korean':
           switchLocale();
+          break;
+
+        case 'Change Network':
+        case '네트워크 전환':
+          context.push('/dialog/network?isInRoom=false').then(
+            (value) {
+              rw();
+            },
+          );
+
           break;
       }
     });
@@ -510,7 +522,11 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
                           padding: EdgeInsets.zero,
                         ),
                         onPressed: () {
-                          context.push('/dialog/network?isInRoom=false');
+                          context.push('/dialog/network?isInRoom=false').then(
+                            (value) {
+                              rw();
+                            },
+                          );
                         },
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -524,7 +540,7 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
                               width: 10,
                             ),
                             Text(
-                              'Change Network',
+                              localKr ? '네트워크 전환' : 'Change Network',
                               style: TextStyle(
                                   letterSpacing: -0.5,
                                   color: Colors.white,
@@ -567,7 +583,7 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
                               width: 10,
                             ),
                             Text(
-                              'Logout',
+                              localKr ? '로그아웃' : 'Logout',
                               style: TextStyle(
                                   letterSpacing: -0.5,
                                   color: Colors.white,

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lepsi_rw_speech_recognizer/lepsi_rw_speech_recognizer.dart';
 import 'package:realwear_flutter/dataSource/socketManager.dart';
 import 'package:realwear_flutter/utils/appConfig.dart';
 import 'package:realwear_flutter/utils/myColors.dart';
@@ -19,19 +21,88 @@ class InternalIpView extends ConsumerStatefulWidget {
 
 class _InternalIpViewState extends ConsumerState<InternalIpView> {
   final TextEditingController ipEditingController =
-      TextEditingController(text: 'http://192.168.50.190');
+      TextEditingController(text: dotenv.env['INTERNAL_IP']!);
   final TextEditingController portEditingController =
-      TextEditingController(text: '5000');
+      TextEditingController(text: dotenv.env['INTERNAL_PORT']!);
 
   final ipFocus = FocusNode();
   final portFocus = FocusNode();
 
-  // bool localKr = true;
-
   @override
   void initState() {
-    // localKr = ref.read(localeViewModelProvider) == 'KOR';
+    rw();
     super.initState();
+  }
+
+  rw() {
+    LepsiRwSpeechRecognizer.setCommands(<String>[
+      'IP Input',
+      '아이피 입력',
+      'Port Input',
+      '포트 입력',
+      'Cancel',
+      '취소',
+      'Connect',
+      '연결',
+    ], (command) async {
+      logger.i(command);
+
+      switch (command) {
+        case 'Cancel':
+        case '취소':
+          context.pop();
+          break;
+        case 'IP Input':
+        case '아이피 입력':
+          FocusScope.of(context).requestFocus(ipFocus);
+          break;
+        case 'Port Input':
+        case '포트 입력':
+          FocusScope.of(context).requestFocus(portFocus);
+          break;
+        case 'Connect':
+        case '연결':
+          connect();
+          break;
+      }
+    });
+  }
+
+  connect() async {
+    if (ipEditingController.text.isEmpty) {
+      MyToasts().showNormal('Please enter the IP.');
+      return;
+    }
+
+    if (portEditingController.text.isEmpty) {
+      MyToasts().showNormal('Please enter the Port.');
+      return;
+    }
+
+    try {
+      await SocketManager()
+          .connect('${ipEditingController.text}:${portEditingController.text}');
+
+      setState(() {
+        AppConfig.isExternal = false;
+
+        print(AppConfig.isExternal);
+
+        AppConfig.INTERNAL_URL =
+            '${ipEditingController.text}:${portEditingController.text}';
+      });
+
+      final SharedPreferencesAsync asyncPrefs = SharedPreferencesAsync();
+
+      asyncPrefs.setString('internalURL', AppConfig.INTERNAL_URL);
+
+      asyncPrefs.setBool('isExternal', AppConfig.isExternal);
+
+      context.go('/');
+    } catch (e) {
+      MyToasts().showNormal('Internal Network Socket Connect Error');
+      context.go('/network');
+    }
   }
 
   @override
@@ -294,46 +365,7 @@ class _InternalIpViewState extends ConsumerState<InternalIpView> {
                           value: 'hf_no_number',
                           child: PrimaryButton(
                             title: 'Connect',
-                            onTap: () async {
-                              if (ipEditingController.text.isEmpty) {
-                                MyToasts().showNormal('Please enter the IP.');
-                                return;
-                              }
-
-                              if (portEditingController.text.isEmpty) {
-                                MyToasts().showNormal('Please enter the Port.');
-                                return;
-                              }
-
-                              try {
-                                await SocketManager().connect(
-                                    '${ipEditingController.text}:${portEditingController.text}');
-
-                                setState(() {
-                                  AppConfig.isExternal = false;
-
-                                  print(AppConfig.isExternal);
-
-                                  AppConfig.INTERNAL_URL =
-                                      '${ipEditingController.text}:${portEditingController.text}';
-                                });
-
-                                final SharedPreferencesAsync asyncPrefs =
-                                    SharedPreferencesAsync();
-
-                                asyncPrefs.setString(
-                                    'internalURL', AppConfig.INTERNAL_URL);
-
-                                asyncPrefs.setBool(
-                                    'isExternal', AppConfig.isExternal);
-
-                                context.go('/');
-                              } catch (e) {
-                                MyToasts().showNormal(
-                                    'Internal Network Socket Connect Error');
-                                context.go('/network');
-                              }
-                            },
+                            onTap: connect,
                           ),
                         ),
                       ),
@@ -343,6 +375,31 @@ class _InternalIpViewState extends ConsumerState<InternalIpView> {
                 const SizedBox(
                   height: 20,
                 ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      SizedBox(
+                        width: 120,
+                        height: 50,
+                        child: Semantics(
+                          value: 'hf_no_number',
+                          child: PrimaryButton(
+                            isWhite: true,
+                            title: 'Cancel',
+                            onTap: () {
+                              context.pop();
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  height: 20,
+                )
               ],
             ),
           ),
