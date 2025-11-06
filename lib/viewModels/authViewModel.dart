@@ -136,6 +136,10 @@ class AuthViewModel extends StateNotifier<AuthModel?> {
     );
   }
 
+  init() {
+    state = null;
+  }
+
   // forgotEmail({required String hp, required Function(String) successFunc}) {
   //   SocketManager().getSocket().emit('forgotAccount', hp);
   //   SocketManager().getSocket().once(
@@ -180,6 +184,24 @@ class AuthViewModel extends StateNotifier<AuthModel?> {
   //     },
   //   );
   // }
+
+  setJoinYn(
+      {required String email, required String yn, required String prevYn}) {
+    SocketManager().getSocket().emit('setJoin', [email, yn, prevYn]);
+  }
+
+  getJoinYn(
+      {required String email, required Function(String, String) successFunc}) {
+    SocketManager().getSocket().emit('getJoin', email);
+    SocketManager().getSocket().once(
+      'resultJoin',
+      (data) {
+        print(data[0]);
+        print(data[1]);
+        successFunc(data[0], data[1]);
+      },
+    );
+  }
 }
 
 final authViewModelProvider =

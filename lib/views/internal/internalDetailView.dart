@@ -161,6 +161,11 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
         });
       },
     );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Future.delayed(const Duration(seconds: 1));
+      rw();
+    });
   }
 
   rw() {

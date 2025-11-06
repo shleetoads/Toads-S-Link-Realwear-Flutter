@@ -183,10 +183,10 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
     );
 
     //혹시나해서
-    // WidgetsBinding.instance.addPostFrameCallback((_) async {
-    //   await Future.delayed(const Duration(seconds: 1));
-    //   rw();
-    // });
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Future.delayed(const Duration(seconds: 1));
+      rw();
+    });
   }
 
   rw() {
@@ -432,6 +432,39 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
   }
 
   Future<void> _dispose() async {
+    if (_recording) {
+      String path = await FlutterScreenRecording.stopRecordScreen;
+      // MyToasts().showNormal('Stop Record Screen');
+
+      logger.i(path);
+
+      await stopRecording();
+
+      //storage/emulated/0/Android/data/com.toads.toadsslink.flutter/cache/739e716b-c4a4-42b8-93af-d2c946444975.mp4
+
+      Directory directory = await getApplicationDocumentsDirectory();
+
+      File tempFile = File(path);
+      File resultFile = File('${directory.path}/${p.basename(path)}');
+
+      //카피해주고 기존꺼 지우고
+
+      resultFile.writeAsBytesSync(tempFile.readAsBytesSync());
+      Directory(tempFile.path).deleteSync(recursive: true);
+
+      String? mergeFile = await mergeAudioAndVideo(
+          resultFile.path, '${directory.path}/remote_audio.wav');
+
+      if (Platform.isAndroid) {
+        const MethodChannel channel = MethodChannel('ToadsSLink');
+        await channel.invokeMethod('refreshMedia', {"path": mergeFile});
+      }
+
+      logger.i(resultFile.path);
+
+      MyToasts().showNormal("Saved in '${resultFile.path}'");
+    }
+
     SocketManager().getSocket().off('screenShareOn');
     SocketManager().getSocket().off('screenShareOff');
 
@@ -1029,7 +1062,7 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
                                       Text(
                                         localKr
                                             ? '증폭 ${isAmp ? '끄기' : '켜기'}'
-                                            : 'Amplification ${isAmp ? 'Off' : 'On'}',
+                                            : 'Noise Boost ${isAmp ? 'Off' : 'On'}',
                                         style: TextStyle(
                                             color: Colors.white,
                                             fontSize: localKr ? 18 : 16,

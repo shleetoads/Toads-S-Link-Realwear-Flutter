@@ -33,6 +33,10 @@ class ConferenceListViewModel extends StateNotifier<List<ConferenceModel>> {
       },
     );
   }
+
+  init() {
+    state = [];
+  }
 }
 
 final conferenceListViewModelProvider =

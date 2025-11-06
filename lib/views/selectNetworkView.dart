@@ -207,7 +207,7 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkView> {
                                       backgroundColor: const Color(0xFF2A82FF),
                                       padding: EdgeInsets.zero,
                                     ),
-                                    onPressed: () async {},
+                                    onPressed: goInternal,
                                     child: Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
