@@ -274,7 +274,7 @@ class _InviteMemberViewState extends ConsumerState<InviteMemberView> {
                   subject: authModel.userName!,
                   authList: selectedList);
 
-              await LepsiRwSpeechRecognizer.restoreCommands();
+              // await LepsiRwSpeechRecognizer.restoreCommands();
               LepsiRwSpeechRecognizer.setCommands(<String>[
                 '네',
                 'Okay',
@@ -304,7 +304,7 @@ class _InviteMemberViewState extends ConsumerState<InviteMemberView> {
 
                           context.pop(true);
 
-                          await LepsiRwSpeechRecognizer.restoreCommands();
+                          // await LepsiRwSpeechRecognizer.restoreCommands();
 
                           context.push('/conference/detail', extra: {
                             'meetId': meetId,
@@ -322,7 +322,7 @@ class _InviteMemberViewState extends ConsumerState<InviteMemberView> {
                           MyLoading().hideLoading(context);
                           context.pop();
 
-                          await LepsiRwSpeechRecognizer.restoreCommands();
+                          // await LepsiRwSpeechRecognizer.restoreCommands();
                           rw();
                         });
                     break;
@@ -424,11 +424,9 @@ class _InviteMemberViewState extends ConsumerState<InviteMemberView> {
                                                 .getConference(meetId: meetId);
 
                                             context.pop(true);
-                                            context.pop();
 
-                                            await LepsiRwSpeechRecognizer
-                                                .restoreCommands();
-
+                                            // await LepsiRwSpeechRecognizer.restoreCommands();
+                                            final router = GoRouter.of(context);
                                             context.push('/conference/detail',
                                                 extra: {
                                                   'meetId': meetId,
@@ -437,13 +435,20 @@ class _InviteMemberViewState extends ConsumerState<InviteMemberView> {
                                                       authModel.accountNo!,
                                                   'companyNo':
                                                       authModel.companyNo!,
-                                                });
+                                                }).then(
+                                              (_) {
+                                                router.pop();
+                                              },
+                                            );
                                           },
                                           failFunc: () async {
                                             MyToasts().showNormal(
                                                 'This is a closed meeting.');
                                             MyLoading().hideLoading(context);
                                             context.pop();
+
+                                            // await LepsiRwSpeechRecognizer.restoreCommands();
+                                            rw();
                                           });
                                 },
                               ),
@@ -461,7 +466,7 @@ class _InviteMemberViewState extends ConsumerState<InviteMemberView> {
                 (value) async {
                   logger.e(value);
                   if (value == null) {
-                    await LepsiRwSpeechRecognizer.restoreCommands();
+                    // await LepsiRwSpeechRecognizer.restoreCommands();
                     rw();
                   }
                 },
@@ -476,7 +481,7 @@ class _InviteMemberViewState extends ConsumerState<InviteMemberView> {
           subject: authModel.userName!,
           authList: selectedList);
 
-      await LepsiRwSpeechRecognizer.restoreCommands();
+      // await LepsiRwSpeechRecognizer.restoreCommands();
       LepsiRwSpeechRecognizer.setCommands(<String>[
         '네',
         'Okay',
@@ -506,7 +511,7 @@ class _InviteMemberViewState extends ConsumerState<InviteMemberView> {
 
                   context.pop(true);
 
-                  await LepsiRwSpeechRecognizer.restoreCommands();
+                  // await LepsiRwSpeechRecognizer.restoreCommands();
 
                   context.push('/internal/detail', extra: {
                     'meetId': meetId,
@@ -523,7 +528,7 @@ class _InviteMemberViewState extends ConsumerState<InviteMemberView> {
                   MyLoading().hideLoading(context);
                   context.pop();
 
-                  await LepsiRwSpeechRecognizer.restoreCommands();
+                  // await LepsiRwSpeechRecognizer.restoreCommands();
                   rw();
                 });
             break;
@@ -623,22 +628,27 @@ class _InviteMemberViewState extends ConsumerState<InviteMemberView> {
                                         .getConference(meetId: meetId);
 
                                     context.pop(true);
-                                    context.pop();
 
-                                    await LepsiRwSpeechRecognizer
-                                        .restoreCommands();
-
+                                    // await LepsiRwSpeechRecognizer.restoreCommands();
+                                    final router = GoRouter.of(context);
                                     context.push('/internal/detail', extra: {
                                       'meetId': meetId,
                                       'accountNo': authModel.accountNo!,
                                       'companyNo': authModel.companyNo!,
-                                    });
+                                    }).then(
+                                      (_) {
+                                        router.pop();
+                                      },
+                                    );
                                   },
                                   failFunc: () async {
                                     MyToasts().showNormal(
                                         'This is a closed meeting.');
                                     MyLoading().hideLoading(context);
                                     context.pop();
+
+                                    // await LepsiRwSpeechRecognizer.restoreCommands();
+                                    rw();
                                   });
                         },
                       ),
@@ -656,7 +666,7 @@ class _InviteMemberViewState extends ConsumerState<InviteMemberView> {
         (value) async {
           logger.e(value);
           if (value == null) {
-            await LepsiRwSpeechRecognizer.restoreCommands();
+            // await LepsiRwSpeechRecognizer.restoreCommands();
             rw();
           }
         },

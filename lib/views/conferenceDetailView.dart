@@ -56,7 +56,8 @@ class ConferenceDetailView extends ConsumerStatefulWidget {
       _ConferenceDetailViewState();
 }
 
-class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
+class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
+    with WidgetsBindingObserver {
   final int _videoDimensionsWidth = 640;
   final int _videoDimensionsHeight = 480;
 
@@ -168,6 +169,8 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
     rw();
     super.initState();
 
+    WidgetsBinding.instance.addObserver(this); // 옵저버 등록
+
     initAgora();
 
     ref.read(screenShareViewModelProvider.notifier).onScreenShare();
@@ -183,10 +186,10 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
     );
 
     //혹시나해서
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Future.delayed(const Duration(seconds: 1));
-      rw();
-    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) async {
+    //   await Future.delayed(const Duration(seconds: 2));
+    //   // rw();
+    // });
   }
 
   rw() {
@@ -246,7 +249,7 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
           break;
         case '초대하기':
         case 'Invite':
-          await LepsiRwSpeechRecognizer.restoreCommands();
+          // await LepsiRwSpeechRecognizer.restoreCommands();
           ConferenceModel? model = ref.read(conferenceViewModelProvider);
           AuthModel authModel = ref.read(authViewModelProvider)!;
           ref
@@ -426,9 +429,37 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
 
   @override
   void dispose() {
-    // WidgetsBinding.instance.removeObserver(this);
+    WidgetsBinding.instance.removeObserver(this);
     _dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        // 💡 앱이 포그라운드로 돌아왔을 때
+        // 멈춘 스트림을 재개하는 로직을 실행합니다.
+        logger.i('resumed');
+        rw();
+        break;
+      case AppLifecycleState.inactive:
+        // 💡 비활성화(iOS/Android 백그라운드 진입 직전) 상태
+        // 필요한 경우 일시 정지 로직을 추가할 수 있습니다.
+        logger.i('inactive');
+
+        break;
+      case AppLifecycleState.paused:
+        // 💡 앱이 백그라운드 상태가 되었을 때
+        // Android에서는 여기서 포그라운드 서비스 시작 등을 고려합니다.
+        logger.i('paused');
+
+        break;
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        // 앱이 종료되었거나 숨겨졌을 때 (필요한 리소스 해제)
+        break;
+    }
   }
 
   Future<void> _dispose() async {
@@ -485,8 +516,6 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
     await _engine.leaveChannel();
     // Release resources
     await _engine.release();
-
-    // await LepsiRwSpeechRecognizer.restoreCommands();
   }
 
   Future<void> initAgora() async {
@@ -1465,31 +1494,37 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView> {
             mainAxisSize: MainAxisSize.min,
             children: [
               for (int i = 1; i <= 5; i++) ...[
-                GestureDetector(
-                  onTap: () async {
-                    setState(() {
-                      _scale = i.toDouble();
-                    });
+                Semantics(
+                  value: 'hf_no_number',
+                  child: GestureDetector(
+                    onTap: () async {
+                      setState(() {
+                        _scale = i.toDouble();
+                      });
 
-                    await _engine.setCameraZoomFactor(_scale);
-                  },
-                  child: Container(
-                    width: _scaleSize,
-                    height: _scaleSize,
-                    decoration: BoxDecoration(
-                        color: _scale == i.toDouble()
-                            ? const Color(0xFFF2F2F2).withOpacity(0.42)
-                            : Colors.transparent,
-                        shape: BoxShape.circle),
-                    child: Center(
-                      child: Text(
-                        '${i}x',
-                        style: TextStyle(
-                          color: _scale == i.toDouble()
-                              ? Colors.white
-                              : const Color(0xFFA5A5A5),
-                          fontSize: 17,
-                          fontWeight: FontWeight.w500,
+                      await _engine.setCameraZoomFactor(_scale);
+                    },
+                    child: Semantics(
+                      value: 'hf_no_number',
+                      child: Container(
+                        width: _scaleSize,
+                        height: _scaleSize,
+                        decoration: BoxDecoration(
+                            color: _scale == i.toDouble()
+                                ? const Color(0xFFF2F2F2).withOpacity(0.42)
+                                : Colors.transparent,
+                            shape: BoxShape.circle),
+                        child: Center(
+                          child: Text(
+                            '${i}x',
+                            style: TextStyle(
+                              color: _scale == i.toDouble()
+                                  ? Colors.white
+                                  : const Color(0xFFA5A5A5),
+                              fontSize: 17,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ),
                       ),
                     ),

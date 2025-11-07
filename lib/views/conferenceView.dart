@@ -50,9 +50,9 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await LepsiRwSpeechRecognizer.restoreCommands();
+      // await LepsiRwSpeechRecognizer.restoreCommands();
       rw();
-      await Future.delayed(const Duration(seconds: 1));
+      await Future.delayed(const Duration(seconds: 2));
       rw();
 
       bool? changeNetworkCreateRoomValue =
@@ -161,14 +161,8 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
       switch (command) {
         case '방만들기':
         case 'Create':
-          await LepsiRwSpeechRecognizer.restoreCommands();
           context.push('/invite').then((value) async {
-            logger.i('여기');
-            logger.i(value);
-            if (value == null) {
-              await LepsiRwSpeechRecognizer.restoreCommands();
-              rw();
-            }
+            rw();
           });
           break;
         case '로그아웃':
@@ -736,7 +730,7 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
             successFunc: (String token) async {
               MyLoading().hideLoading(context);
 
-              await LepsiRwSpeechRecognizer.restoreCommands();
+              // await LepsiRwSpeechRecognizer.restoreCommands();
 
               LepsiRwSpeechRecognizer.setCommands(<String>[
                 '네',
@@ -769,7 +763,7 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
 
                           // await AppConfig.hideStatusNavigationBar();
 
-                          await LepsiRwSpeechRecognizer.restoreCommands();
+                          // await LepsiRwSpeechRecognizer.restoreCommands();
 
                           context.push('/conference/detail', extra: {
                             'meetId': model.meetId!,
@@ -786,9 +780,6 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
                           MyToasts().showNormal('This is a closed meeting.');
                           MyLoading().hideLoading(context);
                           context.pop();
-
-                          // await LepsiRwSpeechRecognizer.restoreCommands();
-                          // rw();
                         });
                     break;
 
@@ -823,7 +814,7 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
 
                           // await AppConfig.hideStatusNavigationBar();
 
-                          await LepsiRwSpeechRecognizer.restoreCommands();
+                          // await LepsiRwSpeechRecognizer.restoreCommands();
 
                           context.push('/conference/detail', extra: {
                             'meetId': model.meetId!,
@@ -952,7 +943,11 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
               child: InkWell(
                 borderRadius: BorderRadius.circular(15),
                 onTap: () async {
-                  context.push('/invite');
+                  context.push('/invite').then(
+                    (value) async {
+                      rw();
+                    },
+                  );
                 },
                 child: Center(
                   child: Image.asset(

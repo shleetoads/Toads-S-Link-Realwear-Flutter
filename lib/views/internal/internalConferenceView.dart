@@ -49,9 +49,9 @@ class _InternalConferenceViewState
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await LepsiRwSpeechRecognizer.restoreCommands();
+      // await LepsiRwSpeechRecognizer.restoreCommands();
       rw();
-      await Future.delayed(const Duration(seconds: 1));
+      await Future.delayed(const Duration(seconds: 2));
       rw();
 
       bool? changeNetworkCreateRoomValue =
@@ -150,14 +150,9 @@ class _InternalConferenceViewState
       switch (command) {
         case '방만들기':
         case 'Create':
-          await LepsiRwSpeechRecognizer.restoreCommands();
+          // await LepsiRwSpeechRecognizer.restoreCommands();
           context.push('/invite').then((value) async {
-            logger.i('여기');
-            logger.i(value);
-            if (value == null) {
-              await LepsiRwSpeechRecognizer.restoreCommands();
-              rw();
-            }
+            rw();
           });
           break;
         case '로그아웃':
@@ -710,7 +705,7 @@ class _InternalConferenceViewState
   goConference(ConferenceModel model) async {
     AuthModel? authModel = ref.read(authViewModelProvider);
     if (authModel != null) {
-      await LepsiRwSpeechRecognizer.restoreCommands();
+      // await LepsiRwSpeechRecognizer.restoreCommands();
 
       LepsiRwSpeechRecognizer.setCommands(<String>[
         '네',
@@ -743,7 +738,7 @@ class _InternalConferenceViewState
 
                   // await AppConfig.hideStatusNavigationBar();
 
-                  await LepsiRwSpeechRecognizer.restoreCommands();
+                  // await LepsiRwSpeechRecognizer.restoreCommands();
 
                   context.push('/internal/detail', extra: {
                     'meetId': model.meetId!,
@@ -759,9 +754,6 @@ class _InternalConferenceViewState
                   MyToasts().showNormal('This is a closed meeting.');
                   MyLoading().hideLoading(context);
                   context.pop();
-
-                  // await LepsiRwSpeechRecognizer.restoreCommands();
-                  // rw();
                 });
             break;
 
@@ -796,7 +788,7 @@ class _InternalConferenceViewState
 
                   // await AppConfig.hideStatusNavigationBar();
 
-                  await LepsiRwSpeechRecognizer.restoreCommands();
+                  // await LepsiRwSpeechRecognizer.restoreCommands();
 
                   context.push('/internal/detail', extra: {
                     'meetId': model.meetId!,
@@ -922,7 +914,11 @@ class _InternalConferenceViewState
               child: InkWell(
                 borderRadius: BorderRadius.circular(15),
                 onTap: () async {
-                  context.push('/invite');
+                  context.push('/invite').then(
+                    (value) {
+                      rw();
+                    },
+                  );
                 },
                 child: Center(
                   child: Image.asset(

@@ -162,10 +162,10 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
       },
     );
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Future.delayed(const Duration(seconds: 1));
-      rw();
-    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) async {
+    //   await Future.delayed(const Duration(seconds: 1));
+    //   rw();
+    // });
   }
 
   rw() {
@@ -211,7 +211,7 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
           break;
         case '초대하기':
         case 'Invite':
-          await LepsiRwSpeechRecognizer.restoreCommands();
+          // await LepsiRwSpeechRecognizer.restoreCommands();
           ConferenceModel? model = ref.read(conferenceViewModelProvider);
           AuthModel authModel = ref.read(authViewModelProvider)!;
           ref
@@ -1193,8 +1193,6 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
   }
 
   void _iceCandidateEvent(RTCIceCandidate? e) {
-    debugPrint('?????');
-
     if (e == null ||
         e.candidate == null ||
         e.sdpMLineIndex == null ||
