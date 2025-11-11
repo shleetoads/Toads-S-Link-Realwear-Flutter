@@ -590,9 +590,6 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
                     userName: userName,
                     device: device,
                   );
-                  logger.e(accountNo);
-                  logger.e(id);
-                  logger.e(device);
 
                   setState(() {});
                 },
@@ -800,9 +797,6 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
                               final double width = constraints.maxWidth;
                               final double height = constraints.maxHeight;
 
-                              logger.e(screenShareModel?.accountNo);
-                              logger.e(screenShareModel?.accountNo);
-
                               return CustomPaint(
                                 foregroundPainter:
                                     SignaturePainter(_drawPoints),
@@ -827,8 +821,15 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
                                           canvas: VideoCanvas(
                                             uid: screenShareModel.accountNo,
                                             view: null,
-                                            mirrorMode: VideoMirrorModeType
-                                                .videoMirrorModeDisabled,
+                                            mirrorMode: usersMap[
+                                                            screenShareModel
+                                                                .accountNo]
+                                                        ?.device ==
+                                                    'pc'
+                                                ? VideoMirrorModeType
+                                                    .videoMirrorModeEnabled
+                                                : VideoMirrorModeType
+                                                    .videoMirrorModeDisabled,
                                           ),
                                           connection: RtcConnection(
                                               channelId: widget.meetId),

@@ -88,7 +88,7 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
       }
 
       try {
-        SocketManager().getSocket().disconnect();
+        SocketManager().disconnect(isNetworkChange: true);
 
         await SocketManager().connect(url);
 
@@ -115,7 +115,7 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
     try {
       bool prevNetwork = AppConfig.isExternal;
 
-      SocketManager().getSocket().disconnect();
+      SocketManager().disconnect(isNetworkChange: true);
       await SocketManager().connect(dotenv.env['BASE_URL']!);
 
       setState(() {

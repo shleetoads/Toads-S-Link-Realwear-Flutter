@@ -93,7 +93,7 @@ class ConferenceViewModel extends StateNotifier<ConferenceModel?> {
     logger.i('getUser');
     SocketManager().getSocket().emit('getUser', [meetId, accountNo]);
     SocketManager().getSocket().once(
-      'getUser',
+      'getUser_$accountNo',
       (data) {
         logger.i(data);
 

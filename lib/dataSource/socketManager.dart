@@ -26,6 +26,7 @@ class SocketManager {
   }
 
   bool isLogin = false;
+  bool isNetworkChange = false;
 
   SocketManager._internal();
 
@@ -127,6 +128,11 @@ class SocketManager {
     socket.onDisconnect((_) {
       print('Socket disconnected');
 
+      if (isNetworkChange) {
+        isNetworkChange = !isNetworkChange;
+        return;
+      }
+
       final context = AppConfig.navigatorKey.currentContext!;
       final ref = ProviderScope.containerOf(context);
 
@@ -170,5 +176,10 @@ class SocketManager {
 
   IO.Socket getSocket() {
     return socket;
+  }
+
+  disconnect({required bool isNetworkChange}) {
+    this.isNetworkChange = isNetworkChange;
+    socket.disconnect();
   }
 }

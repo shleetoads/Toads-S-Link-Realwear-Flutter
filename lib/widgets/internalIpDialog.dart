@@ -397,7 +397,7 @@ class _InternalIpDialogState extends ConsumerState<InternalIpDialog> {
     }
 
     try {
-      SocketManager().getSocket().disconnect();
+      SocketManager().disconnect(isNetworkChange: true);
 
       await SocketManager()
           .connect('${ipEditingController.text}:${portEditingController.text}');
