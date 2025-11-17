@@ -187,8 +187,8 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
 
     //혹시나해서
     // WidgetsBinding.instance.addPostFrameCallback((_) async {
-    //   await Future.delayed(const Duration(seconds: 2));
-    //   // rw();
+    //   await Future.delayed(const Duration(seconds: 3));
+    //   rw();
     // });
   }
 
@@ -745,6 +745,8 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
         .checkScreenShare(meetId: widget.meetId);
 
     rw();
+    await Future.delayed(const Duration(seconds: 2));
+    rw();
   }
 
   @override
@@ -770,6 +772,18 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
         }
       },
     );
+
+    if (screenShareModel != null) {
+      logger.i(usersMap[screenShareModel.accountNo]?.device);
+      logger.i(usersMap[screenShareModel.accountNo]?.device);
+      logger.i(usersMap[screenShareModel.accountNo]?.device);
+      logger.i(usersMap[screenShareModel.accountNo]?.device);
+      logger.i(usersMap[screenShareModel.accountNo]?.device);
+      logger.i(usersMap[screenShareModel.accountNo]?.device);
+      logger.i(usersMap[screenShareModel.accountNo]?.device);
+      logger.i(usersMap[screenShareModel.accountNo]?.device);
+      logger.i(usersMap[screenShareModel.accountNo]?.device);
+    }
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -806,7 +820,10 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
                                       screenShareModel?.accountNo ?? 'local'),
                                   controller: screenShareModel == null ||
                                           screenShareModel.accountNo ==
-                                              widget.accountNo
+                                              widget.accountNo ||
+                                          usersMap[
+                                                  screenShareModel.accountNo] ==
+                                              null
                                       ? VideoViewController(
                                           rtcEngine: _engine,
                                           canvas: const VideoCanvas(
@@ -823,8 +840,8 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
                                             view: null,
                                             mirrorMode: usersMap[
                                                             screenShareModel
-                                                                .accountNo]
-                                                        ?.device ==
+                                                                .accountNo]!
+                                                        .device ==
                                                     'pc'
                                                 ? VideoMirrorModeType
                                                     .videoMirrorModeEnabled
