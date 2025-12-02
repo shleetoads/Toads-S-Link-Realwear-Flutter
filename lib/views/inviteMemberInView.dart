@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lepsi_rw_speech_recognizer/lepsi_rw_speech_recognizer.dart';
 import 'package:realwear_flutter/models/authModel.dart';
 import 'package:realwear_flutter/utils/appConfig.dart';
 import 'package:realwear_flutter/utils/myColors.dart';
+import 'package:realwear_flutter/utils/recog.dart';
 import 'package:realwear_flutter/viewModels/authViewModel.dart';
 import 'package:realwear_flutter/viewModels/chatViewModel.dart';
 import 'package:realwear_flutter/viewModels/conferenceViewModel.dart';
@@ -37,224 +37,6 @@ class _InviteMemberInViewState extends ConsumerState<InviteMemberInView> {
   bool localKr = true;
 
   final scrollController = ScrollController();
-
-  rw() {
-    LepsiRwSpeechRecognizer.setCommands(<String>[
-      '초대',
-      'Invite',
-      '취소',
-      'Cancel',
-      '다음',
-      'Next',
-      '이전',
-      'Previous',
-      '항목 1 선택',
-      'Select One',
-      '항목 2 선택',
-      'Select Two',
-      '항목 3 선택',
-      'Select Three',
-      '항목 4 선택',
-      'Select Four',
-      '항목 1 취소',
-      'Cancel One',
-      '항목 2 취소',
-      'Cancel Two',
-      '항목 3 취소',
-      'Cancel Three',
-      '항목 4 취소',
-      'Cancel Four',
-      '항목 5 취소',
-      'Cancel Five',
-      '항목 6 취소',
-      'Cancel Six',
-      '항목 7 취소',
-      'Cancel Seven',
-      '항목 8 취소',
-      'Cancel Eight',
-      '위로',
-      'Page Up',
-      '아래로',
-      'Page Down'
-    ], (command) async {
-      logger.i(command);
-
-      //이전 다음 화면체크해야됨
-
-      switch (command) {
-        case '위로':
-        case 'Page Up':
-          scrollController.animateTo(
-            scrollController.offset - 250,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOut,
-          );
-          break;
-        case '아래로':
-        case 'Page Down':
-          scrollController.animateTo(
-            scrollController.offset + 250,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOut,
-          );
-          break;
-        case '초대':
-        case 'Invite':
-          AuthModel authModel = ref.read(authViewModelProvider)!;
-          invite(authModel);
-          break;
-        case '취소':
-        case 'Cancel':
-          context.pop();
-          break;
-        case '이전':
-        case 'Previous':
-          prevFunc();
-          break;
-        case '다음':
-        case 'Next':
-          List<AuthModel> modelList = ref.read(inviteMemberInViewModelProvider);
-          nextFunc(modelList.length);
-          break;
-        case '항목 1 선택':
-        case 'Select One':
-          List<AuthModel> modelList = ref.read(inviteMemberInViewModelProvider);
-          int index = nowPage * perPage;
-          if (index + 1 <= modelList.length) {
-            setState(() {
-              if (!nowSelectedList.contains(modelList[index])) {
-                // selectedList.add(modelList[index]);
-                nowSelectedList.add(modelList[index]);
-              } else {
-                // selectedList.remove(modelList[index]);
-                nowSelectedList.remove(modelList[index]);
-              }
-            });
-          }
-          break;
-        case '항목 2 선택':
-        case 'Select Two':
-          List<AuthModel> modelList = ref.read(inviteMemberInViewModelProvider);
-          int index = nowPage * perPage + 1;
-          if (index + 1 <= modelList.length) {
-            setState(() {
-              if (!nowSelectedList.contains(modelList[index])) {
-                // selectedList.add(modelList[index]);
-                nowSelectedList.add(modelList[index]);
-              } else {
-                // selectedList.remove(modelList[index]);
-                nowSelectedList.remove(modelList[index]);
-              }
-            });
-          }
-          break;
-        case '항목 3 선택':
-        case 'Select Three':
-          List<AuthModel> modelList = ref.read(inviteMemberInViewModelProvider);
-          int index = nowPage * perPage + 2;
-          if (index + 1 <= modelList.length) {
-            setState(() {
-              if (!nowSelectedList.contains(modelList[index])) {
-                // selectedList.add(modelList[index]);
-                nowSelectedList.add(modelList[index]);
-              } else {
-                // selectedList.remove(modelList[index]);
-                nowSelectedList.remove(modelList[index]);
-              }
-            });
-          }
-          break;
-        case '항목 4 선택':
-        case 'Select Four':
-          List<AuthModel> modelList = ref.read(inviteMemberInViewModelProvider);
-          int index = nowPage * perPage + 3;
-          if (index + 1 <= modelList.length) {
-            setState(() {
-              if (!nowSelectedList.contains(modelList[index])) {
-                // selectedList.add(modelList[index]);
-                nowSelectedList.add(modelList[index]);
-              } else {
-                // selectedList.remove(modelList[index]);
-                nowSelectedList.remove(modelList[index]);
-              }
-            });
-          }
-          break;
-        case '항목 1 취소':
-        case 'Cancel One':
-          if (nowSelectedList.isNotEmpty) {
-            setState(() {
-              // selectedList.remove(selectedList[0]);
-              nowSelectedList.remove(nowSelectedList[0]);
-            });
-          }
-          break;
-        case '항목 2 취소':
-        case 'Cancel Two':
-          if (nowSelectedList.length > 1) {
-            setState(() {
-              // selectedList.remove(selectedList[1]);
-              nowSelectedList.remove(nowSelectedList[1]);
-            });
-          }
-          break;
-        case '항목 3 취소':
-        case 'Cancel Three':
-          if (nowSelectedList.length > 2) {
-            setState(() {
-              // selectedList.remove(selectedList[2]);
-              nowSelectedList.remove(nowSelectedList[2]);
-            });
-          }
-          break;
-        case '항목 4 취소':
-        case 'Cancel Four':
-          if (nowSelectedList.length > 3) {
-            setState(() {
-              // selectedList.remove(selectedList[3]);
-              nowSelectedList.remove(nowSelectedList[3]);
-            });
-          }
-          break;
-        case '항목 5 취소':
-        case 'Cancel Five':
-          if (nowSelectedList.length > 4) {
-            setState(() {
-              // selectedList.remove(selectedList[4]);
-              nowSelectedList.remove(nowSelectedList[4]);
-            });
-          }
-          break;
-        case '항목 6 취소':
-        case 'Cancel Six':
-          if (nowSelectedList.length > 5) {
-            setState(() {
-              // selectedList.remove(selectedList[5]);
-              nowSelectedList.remove(nowSelectedList[5]);
-            });
-          }
-          break;
-        case '항목 7 취소':
-        case 'Cancel Seven':
-          if (nowSelectedList.length > 6) {
-            setState(() {
-              // selectedList.remove(selectedList[6]);
-              nowSelectedList.remove(nowSelectedList[6]);
-            });
-          }
-          break;
-        case '항목 8 취소':
-        case 'Cancel Eight':
-          if (nowSelectedList.length > 7) {
-            setState(() {
-              // selectedList.remove(selectedList[7]);
-              nowSelectedList.remove(nowSelectedList[7]);
-            });
-          }
-          break;
-      }
-    });
-  }
 
   void _onRefresh() async {
     AuthModel? authModel = ref.read(authViewModelProvider);
@@ -307,8 +89,8 @@ class _InviteMemberInViewState extends ConsumerState<InviteMemberInView> {
   void initState() {
     localKr = ref.read(localeViewModelProvider) == 'KOR';
 
-    rw();
     super.initState();
+    rw2();
 
     //전체 멤버에서
     List<AuthModel> modelList = ref.read(inviteMemberViewModelProvider);
@@ -324,10 +106,192 @@ class _InviteMemberInViewState extends ConsumerState<InviteMemberInView> {
     });
   }
 
-  @override
-  void dispose() {
-    LepsiRwSpeechRecognizer.restoreCommands();
-    super.dispose();
+  rw2() {
+    Recog.setHandler(
+      (command) {
+        switch (command) {
+          case '위로':
+          case 'Page Up':
+            scrollController.animateTo(
+              scrollController.offset - 250,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+            );
+            break;
+          case '아래로':
+          case 'Page Down':
+            scrollController.animateTo(
+              scrollController.offset + 250,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+            );
+            break;
+          case '초대':
+          case 'Invite':
+            AuthModel authModel = ref.read(authViewModelProvider)!;
+            invite(authModel);
+            break;
+          case '취소':
+          case 'Cancel':
+          case '닫기':
+          case 'Close':
+          case '뒤로가기':
+          case 'Go Back':
+            context.pop();
+            break;
+          case '이전':
+          case 'Previous':
+            prevFunc();
+            break;
+          case '다음':
+          case 'Next':
+            List<AuthModel> modelList =
+                ref.read(inviteMemberInViewModelProvider);
+            nextFunc(modelList.length);
+            break;
+          case '항목 1 선택':
+          case 'Select One':
+            List<AuthModel> modelList =
+                ref.read(inviteMemberInViewModelProvider);
+            int index = nowPage * perPage;
+            if (index + 1 <= modelList.length) {
+              setState(() {
+                if (!nowSelectedList.contains(modelList[index])) {
+                  // selectedList.add(modelList[index]);
+                  nowSelectedList.add(modelList[index]);
+                } else {
+                  // selectedList.remove(modelList[index]);
+                  nowSelectedList.remove(modelList[index]);
+                }
+              });
+            }
+            break;
+          case '항목 2 선택':
+          case 'Select Two':
+            List<AuthModel> modelList =
+                ref.read(inviteMemberInViewModelProvider);
+            int index = nowPage * perPage + 1;
+            if (index + 1 <= modelList.length) {
+              setState(() {
+                if (!nowSelectedList.contains(modelList[index])) {
+                  // selectedList.add(modelList[index]);
+                  nowSelectedList.add(modelList[index]);
+                } else {
+                  // selectedList.remove(modelList[index]);
+                  nowSelectedList.remove(modelList[index]);
+                }
+              });
+            }
+            break;
+          case '항목 3 선택':
+          case 'Select Three':
+            List<AuthModel> modelList =
+                ref.read(inviteMemberInViewModelProvider);
+            int index = nowPage * perPage + 2;
+            if (index + 1 <= modelList.length) {
+              setState(() {
+                if (!nowSelectedList.contains(modelList[index])) {
+                  // selectedList.add(modelList[index]);
+                  nowSelectedList.add(modelList[index]);
+                } else {
+                  // selectedList.remove(modelList[index]);
+                  nowSelectedList.remove(modelList[index]);
+                }
+              });
+            }
+            break;
+          case '항목 4 선택':
+          case 'Select Four':
+            List<AuthModel> modelList =
+                ref.read(inviteMemberInViewModelProvider);
+            int index = nowPage * perPage + 3;
+            if (index + 1 <= modelList.length) {
+              setState(() {
+                if (!nowSelectedList.contains(modelList[index])) {
+                  // selectedList.add(modelList[index]);
+                  nowSelectedList.add(modelList[index]);
+                } else {
+                  // selectedList.remove(modelList[index]);
+                  nowSelectedList.remove(modelList[index]);
+                }
+              });
+            }
+            break;
+          case '항목 1 취소':
+          case 'Cancel One':
+            if (nowSelectedList.isNotEmpty) {
+              setState(() {
+                // selectedList.remove(selectedList[0]);
+                nowSelectedList.remove(nowSelectedList[0]);
+              });
+            }
+            break;
+          case '항목 2 취소':
+          case 'Cancel Two':
+            if (nowSelectedList.length > 1) {
+              setState(() {
+                // selectedList.remove(selectedList[1]);
+                nowSelectedList.remove(nowSelectedList[1]);
+              });
+            }
+            break;
+          case '항목 3 취소':
+          case 'Cancel Three':
+            if (nowSelectedList.length > 2) {
+              setState(() {
+                // selectedList.remove(selectedList[2]);
+                nowSelectedList.remove(nowSelectedList[2]);
+              });
+            }
+            break;
+          case '항목 4 취소':
+          case 'Cancel Four':
+            if (nowSelectedList.length > 3) {
+              setState(() {
+                // selectedList.remove(selectedList[3]);
+                nowSelectedList.remove(nowSelectedList[3]);
+              });
+            }
+            break;
+          case '항목 5 취소':
+          case 'Cancel Five':
+            if (nowSelectedList.length > 4) {
+              setState(() {
+                // selectedList.remove(selectedList[4]);
+                nowSelectedList.remove(nowSelectedList[4]);
+              });
+            }
+            break;
+          case '항목 6 취소':
+          case 'Cancel Six':
+            if (nowSelectedList.length > 5) {
+              setState(() {
+                // selectedList.remove(selectedList[5]);
+                nowSelectedList.remove(nowSelectedList[5]);
+              });
+            }
+            break;
+          case '항목 7 취소':
+          case 'Cancel Seven':
+            if (nowSelectedList.length > 6) {
+              setState(() {
+                // selectedList.remove(selectedList[6]);
+                nowSelectedList.remove(nowSelectedList[6]);
+              });
+            }
+            break;
+          case '항목 8 취소':
+          case 'Cancel Eight':
+            if (nowSelectedList.length > 7) {
+              setState(() {
+                // selectedList.remove(selectedList[7]);
+                nowSelectedList.remove(nowSelectedList[7]);
+              });
+            }
+            break;
+        }
+      },
+    );
   }
 
   @override
@@ -335,292 +299,296 @@ class _InviteMemberInViewState extends ConsumerState<InviteMemberInView> {
     List<AuthModel> inModelList = ref.watch(inviteMemberInViewModelProvider);
     AuthModel myModel = ref.watch(authViewModelProvider)!;
 
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        padding: EdgeInsets.symmetric(horizontal: 30, vertical: 5),
-        color: Color(0xFF181820),
-        child: Column(
-          children: [
-            const SizedBox(
-              height: 8,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Invite',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                nowSelectedList.length + selectedList.length > 3
-                    ? Expanded(
-                        flex: 2,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Image.asset(
-                              'assets/icons/ic_voice.png',
-                              width: 30,
-                              height: 30,
-                            ),
-                            SizedBox(
-                              width: 5,
-                            ),
-                            Text(
-                              localKr ? '위로/아래로' : 'Page Up/Down',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w500),
-                            ),
-                          ],
-                        ),
-                      )
-                    : SizedBox()
-                // Row(
-                //   mainAxisAlignment: MainAxisAlignment.end,
-                //   children: [
-                //     Image.asset(
-                //       'assets/icons/ic_voice.png',
-                //       width: 40,
-                //       height: 40,
-                //     ),
-                //     SizedBox(
-                //       width: 10,
-                //     ),
-                //     Text(
-                //       '새로고침',
-                //       style: TextStyle(
-                //           color: Color(0xFF7D7D7D),
-                //           fontSize: 22,
-                //           fontWeight: FontWeight.w500),
-                //     ),
-                //     SizedBox(
-                //       width: 10,
-                //     ),
-                //     GestureDetector(
-                //       onTap: () {
-                //         _onRefresh();
-                //       },
-                //       child: CircleAvatar(
-                //         radius: 20, // 크기
-                //         backgroundColor: MyColors.primary.withOpacity(0.8),
-                //         child: Icon(
-                //           Icons.refresh_rounded,
-                //           color: Colors.white,
-                //           size: 20,
-                //         ),
-                //       ),
-                //     ),
-                //   ],
-                // )
-              ],
-            ),
-            SizedBox(
-              height: 10,
-            ),
-            Expanded(
-              child: Row(
+    return Semantics(
+      label:
+          "hf_add_commands:위로|Page Up|아래로|Page Down|초대|Invite|취소|Cancel|닫기|Close|뒤로가기|Go Back|이전|Previous|다음|Next|항목 1 선택|항목 2 선택|항목 3 선택|항목 4 선택|Select One|Select Two|Select Three|Select Four|항목 1 취소|항목 2 취소|항목 3 취소|항목 4 취소|항목 5 취소|항목 6 취소|항목 7 취소|항목 8 취소|Cancel One|Cancel Two|Cancel Three|Cancel Four|Cancel Five|Cancel Six|Cancel Seven|Cancel Eight|",
+      child: Scaffold(
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          padding: EdgeInsets.symmetric(horizontal: 30, vertical: 5),
+          color: Color(0xFF181820),
+          child: Column(
+            children: [
+              const SizedBox(
+                height: 8,
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Select Attendee',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w500),
-                            ),
-                            Text(
-                              'Page ${nowPage + 1}',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            )
-                          ],
-                        ),
-                        const SizedBox(
-                          height: 5,
-                        ),
-                        _list(inModelList),
-                        const SizedBox(
-                          height: 10,
-                        ),
-                      ],
+                  const Text(
+                    'Invite',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  SizedBox(
-                    width: 20,
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Selected Attendee',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w500),
-                        ),
-                        const SizedBox(
-                          height: 10,
-                        ),
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.grey[800],
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 6, horizontal: 4),
-                            child: SingleChildScrollView(
-                              controller: scrollController,
-                              child: Column(
-                                children: [
-                                  _selectedItem(myModel, false, 0),
-                                  for (int i = 0;
-                                      i < selectedList.length;
-                                      i++) ...[
-                                    const SizedBox(
-                                      height: 9,
-                                    ),
-                                    _selectedItem(selectedList[i], false, i),
-                                  ],
-                                  for (int i = 0;
-                                      i < nowSelectedList.length;
-                                      i++) ...[
-                                    const SizedBox(
-                                      height: 9,
-                                    ),
-                                    _selectedItem(nowSelectedList[i], true, i)
-                                  ]
-                                ],
+                  nowSelectedList.length + selectedList.length > 3
+                      ? Expanded(
+                          flex: 2,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Image.asset(
+                                'assets/icons/ic_voice.png',
+                                width: 30,
+                                height: 30,
                               ),
-                            ),
+                              SizedBox(
+                                width: 5,
+                              ),
+                              Text(
+                                localKr ? '위로/아래로' : 'Page Up/Down',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w500),
+                              ),
+                            ],
                           ),
-                        ),
-                        SizedBox(
-                          height: 10,
-                        ),
-                      ],
-                    ),
-                  )
+                        )
+                      : SizedBox()
+                  // Row(
+                  //   mainAxisAlignment: MainAxisAlignment.end,
+                  //   children: [
+                  //     Image.asset(
+                  //       'assets/icons/ic_voice.png',
+                  //       width: 40,
+                  //       height: 40,
+                  //     ),
+                  //     SizedBox(
+                  //       width: 10,
+                  //     ),
+                  //     Text(
+                  //       '새로고침',
+                  //       style: TextStyle(
+                  //           color: Color(0xFF7D7D7D),
+                  //           fontSize: 22,
+                  //           fontWeight: FontWeight.w500),
+                  //     ),
+                  //     SizedBox(
+                  //       width: 10,
+                  //     ),
+                  //     GestureDetector(
+                  //       onTap: () {
+                  //         _onRefresh();
+                  //       },
+                  //       child: CircleAvatar(
+                  //         radius: 20, // 크기
+                  //         backgroundColor: MyColors.primary.withOpacity(0.8),
+                  //         child: Icon(
+                  //           Icons.refresh_rounded,
+                  //           color: Colors.white,
+                  //           size: 20,
+                  //         ),
+                  //       ),
+                  //     ),
+                  //   ],
+                  // )
                 ],
               ),
-            ),
-            Row(
-              children: [
-                Row(
+              SizedBox(
+                height: 10,
+              ),
+              Expanded(
+                child: Row(
                   children: [
-                    if (nowPage != 0) ...[
-                      _leftPageWidget(),
-                      SizedBox(
-                        width: 15,
-                      ),
-                    ],
-                    if (nowPage <
-                        (inModelList.length / perPage).ceil() - 1) ...[
-                      _rightPageWidget(inModelList.length),
-                    ],
-                  ],
-                ),
-                Spacer(),
-                Row(
-                  children: [
-                    Row(
-                      children: [
-                        Image.asset(
-                          'assets/icons/ic_voice.png',
-                          width: 30,
-                          height: 30,
-                        ),
-                        SizedBox(
-                          width: 5,
-                        ),
-                        Text(
-                          localKr ? '취소' : 'Cancel',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: localKr ? 22 : 18,
-                              fontWeight: FontWeight.w500),
-                        ),
-                        SizedBox(
-                          width: 10,
-                        ),
-                        SizedBox(
-                          width: 120,
-                          height: 50,
-                          child: Semantics(
-                            value: 'hf_no_number',
-                            child: PrimaryButton(
-                              isWhite: true,
-                              title: 'Cancel',
-                              onTap: () {
-                                context.pop();
-                              },
-                            ),
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Select Attendee',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w500),
+                              ),
+                              Text(
+                                'Page ${nowPage + 1}',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              )
+                            ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(
+                            height: 5,
+                          ),
+                          _list(inModelList),
+                          const SizedBox(
+                            height: 10,
+                          ),
+                        ],
+                      ),
                     ),
                     SizedBox(
-                      width: 10,
+                      width: 20,
                     ),
-                    Row(
-                      children: [
-                        Image.asset(
-                          'assets/icons/ic_voice.png',
-                          width: 30,
-                          height: 30,
-                        ),
-                        SizedBox(
-                          width: 5,
-                        ),
-                        Text(
-                          localKr ? '초대' : 'Invite',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: localKr ? 22 : 18,
-                              fontWeight: FontWeight.w500),
-                        ),
-                        SizedBox(
-                          width: 10,
-                        ),
-                        SizedBox(
-                          width: 120,
-                          height: 50,
-                          child: Semantics(
-                            value: 'hf_no_number',
-                            child: PrimaryButton(
-                              title: 'Invite',
-                              onTap: () {
-                                invite(myModel);
-                              },
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Selected Attendee',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(
+                            height: 10,
+                          ),
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey[800],
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 6, horizontal: 4),
+                              child: SingleChildScrollView(
+                                controller: scrollController,
+                                child: Column(
+                                  children: [
+                                    _selectedItem(myModel, false, 0),
+                                    for (int i = 0;
+                                        i < selectedList.length;
+                                        i++) ...[
+                                      const SizedBox(
+                                        height: 9,
+                                      ),
+                                      _selectedItem(selectedList[i], false, i),
+                                    ],
+                                    for (int i = 0;
+                                        i < nowSelectedList.length;
+                                        i++) ...[
+                                      const SizedBox(
+                                        height: 9,
+                                      ),
+                                      _selectedItem(nowSelectedList[i], true, i)
+                                    ]
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                        ],
+                      ),
+                    )
+                  ],
+                ),
+              ),
+              Row(
+                children: [
+                  Row(
+                    children: [
+                      if (nowPage != 0) ...[
+                        _leftPageWidget(),
+                        SizedBox(
+                          width: 15,
                         ),
                       ],
-                    ),
-                  ],
-                )
-              ],
-            )
-          ],
+                      if (nowPage <
+                          (inModelList.length / perPage).ceil() - 1) ...[
+                        _rightPageWidget(inModelList.length),
+                      ],
+                    ],
+                  ),
+                  Spacer(),
+                  Row(
+                    children: [
+                      Row(
+                        children: [
+                          Image.asset(
+                            'assets/icons/ic_voice.png',
+                            width: 30,
+                            height: 30,
+                          ),
+                          SizedBox(
+                            width: 5,
+                          ),
+                          Text(
+                            localKr ? '취소' : 'Cancel',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: localKr ? 22 : 18,
+                                fontWeight: FontWeight.w500),
+                          ),
+                          SizedBox(
+                            width: 10,
+                          ),
+                          SizedBox(
+                            width: 120,
+                            height: 50,
+                            child: Semantics(
+                              value: 'hf_no_number',
+                              child: PrimaryButton(
+                                isWhite: true,
+                                title: 'Cancel',
+                                onTap: () {
+                                  context.pop();
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(
+                        width: 10,
+                      ),
+                      Row(
+                        children: [
+                          Image.asset(
+                            'assets/icons/ic_voice.png',
+                            width: 30,
+                            height: 30,
+                          ),
+                          SizedBox(
+                            width: 5,
+                          ),
+                          Text(
+                            localKr ? '초대' : 'Invite',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: localKr ? 22 : 18,
+                                fontWeight: FontWeight.w500),
+                          ),
+                          SizedBox(
+                            width: 10,
+                          ),
+                          SizedBox(
+                            width: 120,
+                            height: 50,
+                            child: Semantics(
+                              value: 'hf_no_number',
+                              child: PrimaryButton(
+                                title: 'Invite',
+                                onTap: () {
+                                  invite(myModel);
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  )
+                ],
+              )
+            ],
+          ),
         ),
       ),
     );

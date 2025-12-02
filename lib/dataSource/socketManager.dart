@@ -148,9 +148,9 @@ class SocketManager {
       }
 
       if (AppConfig.isExternal) {
-        router.go('/home');
+        router.go('/conference');
       } else {
-        router.go('/internal/home');
+        router.go('/internal/conference');
       }
 
       AuthModel? authModel = ref.read(authViewModelProvider);

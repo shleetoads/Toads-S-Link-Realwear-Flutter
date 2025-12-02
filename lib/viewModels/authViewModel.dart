@@ -63,7 +63,8 @@ class AuthViewModel extends StateNotifier<AuthModel?> {
   autoLogin(
       {required String email,
       required Function(int, int, String) successFunc,
-      required Function() duplicateFunc}) {
+      required Function() duplicateFunc,
+      required Function() failFunc}) {
     SocketManager().getSocket().emit('autoLogin', email);
     SocketManager().getSocket().once(
       'loginResult',
@@ -84,6 +85,10 @@ class AuthViewModel extends StateNotifier<AuthModel?> {
           case 'autoLogin':
             // print(data[1]);
             getMember(email: email, successFunc: successFunc);
+            break;
+
+          case 'noAccount':
+            failFunc();
             break;
         }
       },

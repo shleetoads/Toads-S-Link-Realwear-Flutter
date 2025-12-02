@@ -67,6 +67,14 @@ class _SplashViewState extends ConsumerState<SplashView> {
                 context.go('/internal/conference');
               }
             },
+            failFunc: () {
+              ref.read(authViewModelProvider.notifier).logout();
+
+              final asyncShared = SharedPreferencesAsync();
+              asyncShared.remove('email');
+
+              context.go('/signin');
+            },
           );
     }
   }

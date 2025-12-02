@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lepsi_rw_speech_recognizer/lepsi_rw_speech_recognizer.dart';
 import 'package:realwear_flutter/dataSource/socketManager.dart';
 import 'package:realwear_flutter/utils/appConfig.dart';
 import 'package:realwear_flutter/utils/myToasts.dart';
+import 'package:realwear_flutter/utils/recog.dart';
 import 'package:realwear_flutter/widgets/primaryButton.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -23,30 +23,26 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkView> {
   @override
   void initState() {
     setTimeoutForNextPage();
-    rw();
     super.initState();
   }
 
-  rw() {
-    LepsiRwSpeechRecognizer.setCommands(<String>[
-      'Internal Network',
-      '내부 네트워크',
-      'External Network',
-      '외부 네트워크',
-    ], (command) async {
-      logger.i(command);
+  rw2() {
+    Recog.setHandler(
+      (command) {
+        logger.i(command);
 
-      switch (command) {
-        case 'External Network':
-        case '외부 네트워크':
-          goExternal();
-          break;
-        case 'Internal Network':
-        case '내부 네트워크':
-          goInternal();
-          break;
-      }
-    });
+        switch (command) {
+          case 'External Network':
+          case '외부 네트워크':
+            goExternal();
+            break;
+          case 'Internal Network':
+          case '내부 네트워크':
+            goInternal();
+            break;
+        }
+      },
+    );
   }
 
   goInternal() async {
@@ -55,7 +51,7 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkView> {
     if (url == null) {
       context.push('/internal/ip').then(
         (value) {
-          rw();
+          rw2();
         },
       );
     } else {
@@ -106,6 +102,7 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkView> {
         setState(() {
           showUi = true;
         });
+        rw2();
       } else if (isExternal) {
         await SocketManager().connect(dotenv.env['BASE_URL']!);
 
@@ -138,155 +135,161 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkView> {
   @override
   Widget build(BuildContext context) {
     return showUi
-        ? Scaffold(
-            backgroundColor: Color(0xFF181820),
-            body: Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 0),
-                child: Container(
-                  width: 600,
-                  padding: const EdgeInsets.all(0),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF272B37),
-                    shape: BoxShape.rectangle,
-                    borderRadius: BorderRadius.circular(20),
-                    border:
-                        Border.all(color: const Color(0xFFCDCDCD), width: 1),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      const SizedBox(
-                        height: 20,
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 20),
-                        child: Text(
-                          'Select Network',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 30,
-                            fontWeight: FontWeight.w600,
+        ? Semantics(
+            label:
+                'hf_add_commands:외부 네트워크|External Network|내부 네트워크|Internal Network|',
+            child: Scaffold(
+              backgroundColor: Color(0xFF181820),
+              body: Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 0),
+                  child: Container(
+                    width: 600,
+                    padding: const EdgeInsets.all(0),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF272B37),
+                      shape: BoxShape.rectangle,
+                      borderRadius: BorderRadius.circular(20),
+                      border:
+                          Border.all(color: const Color(0xFFCDCDCD), width: 1),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const SizedBox(
+                          height: 20,
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 20),
+                          child: Text(
+                            'Select Network',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 30,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(
-                        height: 10,
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 20),
-                        child: Text(
-                          'Please choose how you would like to connect',
-                          style: TextStyle(
-                            color: Color(0xFFB7BDC3),
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
+                        const SizedBox(
+                          height: 10,
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 20),
+                          child: Text(
+                            'Please choose how you would like to connect',
+                            style: TextStyle(
+                              color: Color(0xFFB7BDC3),
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(
-                        height: 20,
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: SizedBox(
-                                width: double.infinity,
-                                height: 60,
-                                child: Semantics(
-                                  value: 'hf_no_number',
-                                  child: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      elevation: 0.0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(8.0),
+                        const SizedBox(
+                          height: 20,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  height: 60,
+                                  child: Semantics(
+                                    value: 'hf_no_number',
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        elevation: 0.0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8.0),
+                                        ),
+                                        backgroundColor:
+                                            const Color(0xFF2A82FF),
+                                        padding: EdgeInsets.zero,
                                       ),
-                                      backgroundColor: const Color(0xFF2A82FF),
-                                      padding: EdgeInsets.zero,
-                                    ),
-                                    onPressed: goInternal,
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Image.asset(
-                                          'assets/icons/ic_internal.png',
-                                          width: 26,
-                                          height: 24,
-                                        ),
-                                        SizedBox(
-                                          width: 15,
-                                        ),
-                                        Text(
-                                          'Internal Network',
-                                          style: TextStyle(
-                                              letterSpacing: -0.5,
-                                              color: Colors.white,
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.w500),
-                                        ),
-                                      ],
+                                      onPressed: goInternal,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Image.asset(
+                                            'assets/icons/ic_internal.png',
+                                            width: 26,
+                                            height: 24,
+                                          ),
+                                          SizedBox(
+                                            width: 15,
+                                          ),
+                                          Text(
+                                            'Internal Network',
+                                            style: TextStyle(
+                                                letterSpacing: -0.5,
+                                                color: Colors.white,
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.w500),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(
-                              width: 15,
-                            ),
-                            Expanded(
-                              child: SizedBox(
-                                width: double.infinity,
-                                height: 60,
-                                child: Semantics(
-                                  value: 'hf_no_number',
-                                  child: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      elevation: 0.0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(8.0),
+                              const SizedBox(
+                                width: 15,
+                              ),
+                              Expanded(
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  height: 60,
+                                  child: Semantics(
+                                    value: 'hf_no_number',
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        elevation: 0.0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8.0),
+                                        ),
+                                        backgroundColor:
+                                            const Color(0xFF2A82FF),
+                                        padding: EdgeInsets.zero,
                                       ),
-                                      backgroundColor: const Color(0xFF2A82FF),
-                                      padding: EdgeInsets.zero,
-                                    ),
-                                    onPressed: goExternal,
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Image.asset(
-                                          'assets/icons/ic_external.png',
-                                          width: 26,
-                                          height: 24,
-                                        ),
-                                        SizedBox(
-                                          width: 15,
-                                        ),
-                                        Text(
-                                          'External Network',
-                                          style: TextStyle(
-                                              letterSpacing: -0.5,
-                                              color: Colors.white,
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.w500),
-                                        ),
-                                      ],
+                                      onPressed: goExternal,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Image.asset(
+                                            'assets/icons/ic_external.png',
+                                            width: 26,
+                                            height: 24,
+                                          ),
+                                          SizedBox(
+                                            width: 15,
+                                          ),
+                                          Text(
+                                            'External Network',
+                                            style: TextStyle(
+                                                letterSpacing: -0.5,
+                                                color: Colors.white,
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.w500),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(
-                        height: 20,
-                      ),
-                    ],
+                        const SizedBox(
+                          height: 20,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

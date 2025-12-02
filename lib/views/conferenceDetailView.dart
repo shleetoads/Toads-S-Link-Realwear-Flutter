@@ -12,7 +12,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter_screen_recording/flutter_screen_recording.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lepsi_rw_speech_recognizer/lepsi_rw_speech_recognizer.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:realwear_flutter/dataSource/socketManager.dart';
 import 'package:realwear_flutter/models/authModel.dart';
@@ -25,6 +24,7 @@ import 'package:realwear_flutter/models/userModel.dart';
 import 'package:realwear_flutter/utils/appConfig.dart';
 import 'package:realwear_flutter/utils/myLoading.dart';
 import 'package:realwear_flutter/utils/myToasts.dart';
+import 'package:realwear_flutter/utils/recog.dart';
 import 'package:realwear_flutter/utils/signaturePainter.dart';
 import 'package:realwear_flutter/viewModels/authViewModel.dart';
 import 'package:realwear_flutter/viewModels/chatViewModel.dart';
@@ -166,7 +166,6 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
   void initState() {
     localKr = ref.read(localeViewModelProvider) == 'KOR';
 
-    rw();
     super.initState();
 
     WidgetsBinding.instance.addObserver(this); // 옵저버 등록
@@ -184,247 +183,206 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
         });
       },
     );
-
-    //혹시나해서
-    // WidgetsBinding.instance.addPostFrameCallback((_) async {
-    //   await Future.delayed(const Duration(seconds: 3));
-    //   rw();
-    // });
   }
 
-  rw() {
-    LepsiRwSpeechRecognizer.setCommands(<String>[
-      '방 나가기',
-      'Leave Room',
-      '초대하기',
-      'Invite',
-      '플래시 켜기',
-      'Flash On',
-      '플래시 끄기',
-      'Flash Off',
-      '화면녹화 켜기',
-      'Screen Recording On',
-      '화면녹화 끄기',
-      'Screen Recording Off',
-      '메뉴 열기',
-      'Show Menu',
-      '메뉴 닫기',
-      'Hide Menu',
-      '화면공유 켜기',
-      'Screen Share On',
-      '화면공유 끄기',
-      'Screen Share Off',
-      '마이크 켜기',
-      'Mike On',
-      '마이크 끄기',
-      'Mike Off',
-      '사진 저장',
-      'Capture',
-      '채팅 켜기',
-      'Chat On',
-      '채팅 끄기',
-      'Chat Off',
-      '배율 1',
-      'Zoom One',
-      '배율 2',
-      'Zoom Two',
-      '배율 3',
-      'Zoom Three',
-      '배율 4',
-      'Zoom Four',
-      '배율 5',
-      'Zoom Five',
-      '뒤로가기',
-      'Navigate Back',
-      '네트워크 전환',
-      'Change Network',
-    ], (command) async {
-      logger.i(command);
-      switch (command) {
-        case '방 나가기':
-        case '뒤로가기':
-        case 'Leave Room':
-        case 'Navigate Back':
-          _leaveFunc();
-          break;
-        case '초대하기':
-        case 'Invite':
-          // await LepsiRwSpeechRecognizer.restoreCommands();
-          ConferenceModel? model = ref.read(conferenceViewModelProvider);
-          AuthModel authModel = ref.read(authViewModelProvider)!;
-          ref
-              .read(inviteMemberInViewModelProvider.notifier)
-              .getUninviteMemberList(
-                meetId: model!.meetId!,
-                companyNo: authModel.companyNo!,
-                successFunc: () {
-                  context.push('/invite/in', extra: {
-                    'meetId': model.meetId,
-                    'subject': model.subject,
-                  }).then(
-                    (value) async {
-                      if (value == null) {
-                        await Future.delayed(const Duration(milliseconds: 500));
-                        rw();
-                      }
-                    },
-                  );
-                },
-              );
+  rw2() {
+    Recog.setHandler(
+      (command) async {
+        logger.i(command);
+        switch (command) {
+          case '방 나가기':
+          case '뒤로가기':
+          case 'Leave Room':
+          case 'Go Back':
+            _leaveFunc();
+            break;
+          case '초대하기':
+          case 'Invite':
+            // await LepsiRwSpeechRecognizer.restoreCommands();
+            ConferenceModel? model = ref.read(conferenceViewModelProvider);
+            AuthModel authModel = ref.read(authViewModelProvider)!;
+            ref
+                .read(inviteMemberInViewModelProvider.notifier)
+                .getUninviteMemberList(
+                  meetId: model!.meetId!,
+                  companyNo: authModel.companyNo!,
+                  successFunc: () {
+                    context.push('/invite/in', extra: {
+                      'meetId': model.meetId,
+                      'subject': model.subject,
+                    }).then(
+                      (value) async {
+                        if (value == null) {
+                          rw2();
+                        }
+                      },
+                    );
+                  },
+                );
 
-          break;
-        case '플래시 켜기':
-        case 'Flash On':
-          if (isFlash) {
             break;
-          }
-          ScreenShareModel? screenShareModel =
-              ref.read(screenShareViewModelProvider);
-          flash(screenShareModel);
-          await Future.delayed(const Duration(milliseconds: 1500));
-          rw();
-          break;
-        case '플래시 끄기':
-        case 'Flash Off':
-          if (!isFlash) {
-            break;
-          }
-          ScreenShareModel? screenShareModel =
-              ref.read(screenShareViewModelProvider);
-          flash(screenShareModel);
-          break;
-        case '화면녹화 켜기':
-        case 'Screen Recording On':
-          if (_recording) {
-            break;
-          }
-          _record();
-          break;
-        case '화면녹화 끄기':
-        case 'Screen Recording Off':
-          if (!_recording) {
-            break;
-          }
-          _record();
-          break;
-        case '메뉴 열기':
-        case 'Show Menu':
-          setState(() {
-            _isMenuVisible = true;
-          });
-          break;
-        case '메뉴 닫기':
-        case 'Hide Menu':
-          setState(() {
-            _isMenuVisible = false;
-          });
-          break;
-        case '화면공유 켜기':
-        case 'Screen Share On':
-          ScreenShareModel? screenShareModel =
-              ref.read(screenShareViewModelProvider);
-          if (screenShareModel != null) {
-            break;
-          }
-          AuthModel authModel = ref.read(authViewModelProvider)!;
-          share(screenShareModel, authModel);
-          break;
-        case '화면공유 끄기':
-        case 'Screen Share Off':
-          ScreenShareModel? screenShareModel =
-              ref.read(screenShareViewModelProvider);
-          AuthModel authModel = ref.read(authViewModelProvider)!;
+          case '플래시 켜기':
+          case 'Flash On':
+            if (isFlash) {
+              break;
+            }
+            ScreenShareModel? screenShareModel =
+                ref.read(screenShareViewModelProvider);
+            flash(screenShareModel);
 
-          if (screenShareModel != null &&
-              screenShareModel.accountNo == authModel.accountNo) {
+            break;
+          case '플래시 끄기':
+          case 'Flash Off':
+            if (!isFlash) {
+              break;
+            }
+            ScreenShareModel? screenShareModel =
+                ref.read(screenShareViewModelProvider);
+            flash(screenShareModel);
+            break;
+          case '화면녹화 켜기':
+          case 'Screen Recording On':
+            if (_recording) {
+              break;
+            }
+            _record();
+            break;
+          case '화면녹화 끄기':
+          case 'Screen Recording Off':
+            if (!_recording) {
+              break;
+            }
+            _record();
+            break;
+          case '메뉴 열기':
+          case 'Show Menu':
+            setState(() {
+              _isMenuVisible = true;
+            });
+            break;
+          case '메뉴 닫기':
+          case 'Hide Menu':
+            setState(() {
+              _isMenuVisible = false;
+            });
+            break;
+          case '화면공유 켜기':
+          case 'Screen Share On':
+            ScreenShareModel? screenShareModel =
+                ref.read(screenShareViewModelProvider);
+            if (screenShareModel != null) {
+              break;
+            }
+            AuthModel authModel = ref.read(authViewModelProvider)!;
             share(screenShareModel, authModel);
-          }
-          break;
-        case '마이크 켜기':
-        case 'Mike On':
-          if (_myAudio) break;
-          await _engine.muteLocalAudioStream(_myAudio);
+            break;
+          case '화면공유 끄기':
+          case 'Screen Share Off':
+            ScreenShareModel? screenShareModel =
+                ref.read(screenShareViewModelProvider);
+            AuthModel authModel = ref.read(authViewModelProvider)!;
 
-          setState(() {
-            _myAudio = !_myAudio;
-          });
-          break;
-        case '마이크 끄기':
-        case 'Mike Off':
-          if (!_myAudio) break;
-          await _engine.muteLocalAudioStream(_myAudio);
+            if (screenShareModel != null &&
+                screenShareModel.accountNo == authModel.accountNo) {
+              share(screenShareModel, authModel);
+            }
+            break;
+          case '마이크 켜기':
+          case 'Mike On':
+            if (_myAudio) break;
+            await _engine.muteLocalAudioStream(_myAudio);
 
-          setState(() {
-            _myAudio = !_myAudio;
-          });
-          break;
-        case '사진 저장':
-        case 'Capture':
-          capture();
-          break;
-        case '채팅 켜기':
-        case 'Chat On':
-          setState(() {
-            _showChat = true;
-          });
-          break;
-        case '채팅 끄기':
-        case 'Chat Off':
-          setState(() {
-            _showChat = false;
-          });
-          break;
-        case '배율 1':
-        case 'Zoom One':
-          setState(() {
-            _scale = 1.0;
-          });
-          await _engine.setCameraZoomFactor(_scale);
-          break;
-        case '배율 2':
-        case 'Zoom Two':
-          setState(() {
-            _scale = 2.0;
-          });
-          await _engine.setCameraZoomFactor(_scale);
-          break;
-        case '배율 3':
-        case 'Zoom Three':
-          setState(() {
-            _scale = 3.0;
-          });
-          await _engine.setCameraZoomFactor(_scale);
-          break;
-        case '배율 4':
-        case 'Zoom Four':
-          setState(() {
-            _scale = 4.0;
-          });
-          await _engine.setCameraZoomFactor(_scale);
-          break;
-        case '배율 5':
-        case 'Zoom Five':
-          setState(() {
-            _scale = 5.0;
-          });
-          await _engine.setCameraZoomFactor(_scale);
-          break;
+            setState(() {
+              _myAudio = !_myAudio;
+            });
+            break;
+          case '마이크 끄기':
+          case 'Mike Off':
+            if (!_myAudio) break;
+            await _engine.muteLocalAudioStream(_myAudio);
 
-        case '네트워크 전환':
-        case 'Change Network':
-          context.push(
-            '/dialog/network?isInRoom=true',
-            extra: () async {
-              await _leaveFunc();
-            },
-          ).then(
-            (value) {
-              rw();
-            },
-          );
-          break;
-      }
-    });
+            setState(() {
+              _myAudio = !_myAudio;
+            });
+            break;
+          case '증폭 켜기':
+          case 'Noise Boost On':
+            if (isAmp) break;
+            noiseBoost();
+            break;
+          case '증폭 끄기':
+          case 'Noise Boost Off':
+            if (!isAmp) break;
+            noiseBoost();
+            break;
+          case '사진 저장':
+          case 'Capture':
+            capture();
+            break;
+          case '채팅 켜기':
+          case 'Chat On':
+            setState(() {
+              _showChat = true;
+            });
+            break;
+          case '채팅 끄기':
+          case 'Chat Off':
+            setState(() {
+              _showChat = false;
+            });
+            break;
+          case '배율 1':
+          case 'Zoom One':
+            setState(() {
+              _scale = 1.0;
+            });
+            await _engine.setCameraZoomFactor(_scale);
+            break;
+          case '배율 2':
+          case 'Zoom Two':
+            setState(() {
+              _scale = 2.0;
+            });
+            await _engine.setCameraZoomFactor(_scale);
+            break;
+          case '배율 3':
+          case 'Zoom Three':
+            setState(() {
+              _scale = 3.0;
+            });
+            await _engine.setCameraZoomFactor(_scale);
+            break;
+          case '배율 4':
+          case 'Zoom Four':
+            setState(() {
+              _scale = 4.0;
+            });
+            await _engine.setCameraZoomFactor(_scale);
+            break;
+          case '배율 5':
+          case 'Zoom Five':
+            setState(() {
+              _scale = 5.0;
+            });
+            await _engine.setCameraZoomFactor(_scale);
+            break;
+
+          case '네트워크 전환':
+          case 'Change Network':
+            context.push(
+              '/dialog/network?isInRoom=true',
+              extra: () async {
+                await _leaveFunc();
+              },
+            ).then(
+              (value) {
+                rw2();
+              },
+            );
+            break;
+        }
+      },
+    );
   }
 
   @override
@@ -441,7 +399,7 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
         // 💡 앱이 포그라운드로 돌아왔을 때
         // 멈춘 스트림을 재개하는 로직을 실행합니다.
         logger.i('resumed');
-        rw();
+        // rw2();
         break;
       case AppLifecycleState.inactive:
         // 💡 비활성화(iOS/Android 백그라운드 진입 직전) 상태
@@ -736,6 +694,8 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
 
     afterAgora();
 
+    rw2();
+
     MyLoading().hideLoading(context);
   }
 
@@ -743,10 +703,6 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
     await ref
         .read(screenShareViewModelProvider.notifier)
         .checkScreenShare(meetId: widget.meetId);
-
-    rw();
-    await Future.delayed(const Duration(seconds: 2));
-    rw();
   }
 
   @override
@@ -773,547 +729,405 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
       },
     );
 
-    if (screenShareModel != null) {
-      logger.i(usersMap[screenShareModel.accountNo]?.device);
-      logger.i(usersMap[screenShareModel.accountNo]?.device);
-      logger.i(usersMap[screenShareModel.accountNo]?.device);
-      logger.i(usersMap[screenShareModel.accountNo]?.device);
-      logger.i(usersMap[screenShareModel.accountNo]?.device);
-      logger.i(usersMap[screenShareModel.accountNo]?.device);
-      logger.i(usersMap[screenShareModel.accountNo]?.device);
-      logger.i(usersMap[screenShareModel.accountNo]?.device);
-      logger.i(usersMap[screenShareModel.accountNo]?.device);
-    }
+    return Semantics(
+      label:
+          "hf_add_commands:방 나가기|Leave Room|초대하기|Invite|플래시 켜기|Flash On|플래시 끄기|Flash Off|화면녹화 켜기|Screen Recording On|화면녹화 끄기|Screen Recording Off|메뉴 열기|Show Menu|메뉴 닫기|Hide Menu|화면공유 켜기|Screen Share On|화면공유 끄기|Screen Share Off|마이크 켜키|Mike On|마이크 끄기|Mike Off|사진 저장|Capture|채팅 켜기|Chat On|채팅 끄기|Chat Off|배율 1|배율 2|배율 3|배율 4|배율 5|Zoom One|Zoom Two|Zoom Three|Zoom Four|Zoom Five|뒤로가기|Go Back|네트워크 전환|Change Network|증폭 켜기|Noise Boost On|증폭 끄기|Noise Boost Off|",
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Stack(
+            children: [
+              Center(
+                child: AspectRatio(
+                  aspectRatio: 4 / 3,
+                  child: Container(
+                    key: _screenSizeKey,
+                    child: !_localUserJoined
+                        ? Center(
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  Color(0xFF4A90DC)),
+                            ),
+                          )
+                        : Screenshot(
+                            controller: _screenshotController,
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final double width = constraints.maxWidth;
+                                final double height = constraints.maxHeight;
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SizedBox(
-        width: double.infinity,
-        height: double.infinity,
-        child: Stack(
-          children: [
-            Center(
-              child: AspectRatio(
-                aspectRatio: 4 / 3,
-                child: Container(
-                  key: _screenSizeKey,
-                  child: !_localUserJoined
-                      ? Center(
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                                Color(0xFF4A90DC)),
-                          ),
-                        )
-                      : Screenshot(
-                          controller: _screenshotController,
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              final double width = constraints.maxWidth;
-                              final double height = constraints.maxHeight;
-
-                              return CustomPaint(
-                                foregroundPainter:
-                                    SignaturePainter(_drawPoints),
-                                size: Size(width, height), // 크기를 제한
-                                child: AgoraVideoView(
-                                  key: ValueKey(
-                                      screenShareModel?.accountNo ?? 'local'),
-                                  controller: screenShareModel == null ||
-                                          screenShareModel.accountNo ==
-                                              widget.accountNo ||
-                                          usersMap[
-                                                  screenShareModel.accountNo] ==
-                                              null
-                                      ? VideoViewController(
-                                          rtcEngine: _engine,
-                                          canvas: const VideoCanvas(
-                                            uid: 0,
-                                            view: null,
-                                            mirrorMode: VideoMirrorModeType
-                                                .videoMirrorModeDisabled,
+                                return CustomPaint(
+                                  foregroundPainter:
+                                      SignaturePainter(_drawPoints),
+                                  size: Size(width, height), // 크기를 제한
+                                  child: AgoraVideoView(
+                                    key: ValueKey(
+                                        screenShareModel?.accountNo ?? 'local'),
+                                    controller: screenShareModel == null ||
+                                            screenShareModel.accountNo ==
+                                                widget.accountNo ||
+                                            usersMap[screenShareModel
+                                                    .accountNo] ==
+                                                null
+                                        ? VideoViewController(
+                                            rtcEngine: _engine,
+                                            canvas: const VideoCanvas(
+                                              uid: 0,
+                                              view: null,
+                                              mirrorMode: VideoMirrorModeType
+                                                  .videoMirrorModeDisabled,
+                                            ),
+                                          )
+                                        : VideoViewController.remote(
+                                            rtcEngine: _engine,
+                                            canvas: VideoCanvas(
+                                              uid: screenShareModel.accountNo,
+                                              view: null,
+                                              mirrorMode: VideoMirrorModeType
+                                                  .videoMirrorModeDisabled,
+                                            ),
+                                            connection: RtcConnection(
+                                                channelId: widget.meetId),
                                           ),
-                                        )
-                                      : VideoViewController.remote(
-                                          rtcEngine: _engine,
-                                          canvas: VideoCanvas(
-                                            uid: screenShareModel.accountNo,
-                                            view: null,
-                                            mirrorMode: usersMap[
-                                                            screenShareModel
-                                                                .accountNo]!
-                                                        .device ==
-                                                    'pc'
-                                                ? VideoMirrorModeType
-                                                    .videoMirrorModeEnabled
-                                                : VideoMirrorModeType
-                                                    .videoMirrorModeDisabled,
-                                          ),
-                                          connection: RtcConnection(
-                                              channelId: widget.meetId),
-                                        ),
-                                ),
-                              );
-                            },
+                                  ),
+                                );
+                              },
+                            ),
                           ),
-                        ),
+                  ),
                 ),
               ),
-            ),
-            zoomWidget(),
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 300), // 애니메이션 지속 시간
-              curve: Curves.easeInOut, // 애니메이션 효과
+              zoomWidget(),
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 300), // 애니메이션 지속 시간
+                curve: Curves.easeInOut, // 애니메이션 효과
 
-              // _isMenuVisible 값에 따라 메뉴의 'bottom' 위치를 변경
-              // true면 0(화면 맨 아래), false면 음수(화면 밖)
-              bottom: _isMenuVisible ? 0 : -120,
-              left: 0,
-              right: 0,
+                // _isMenuVisible 값에 따라 메뉴의 'bottom' 위치를 변경
+                // true면 0(화면 맨 아래), false면 음수(화면 밖)
+                bottom: _isMenuVisible ? 0 : -120,
+                left: 0,
+                right: 0,
 
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Semantics(
-                    value: 'hf_no_number',
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onTap: () {
-                        setState(() {
-                          _isMenuVisible = !_isMenuVisible;
-                        });
-                      },
-                      child: Semantics(
-                        value: 'hf_no_number',
-                        child: Container(
-                          height: 40,
-                          padding: EdgeInsets.only(left: 10, right: 20),
-                          decoration: BoxDecoration(
-                            color: Color(0xFF141414).withOpacity(0.95),
-                            borderRadius: BorderRadius.only(
-                              topRight: Radius.circular(15),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Semantics(
+                      value: 'hf_no_number',
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onTap: () {
+                          setState(() {
+                            _isMenuVisible = !_isMenuVisible;
+                          });
+                        },
+                        child: Semantics(
+                          value: 'hf_no_number',
+                          child: Container(
+                            height: 40,
+                            padding: EdgeInsets.only(left: 10, right: 20),
+                            decoration: BoxDecoration(
+                              color: Color(0xFF141414).withOpacity(0.95),
+                              borderRadius: BorderRadius.only(
+                                topRight: Radius.circular(15),
+                              ),
                             ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _isMenuVisible
-                                    ? Icons.expand_more_rounded
-                                    : Icons.expand_less_rounded,
-                                color: Colors.white,
-                                size: 35,
-                              ),
-                              SizedBox(
-                                width: 10,
-                              ),
-                              Text(
-                                localKr
-                                    ? '메뉴 ${_isMenuVisible ? '닫기' : '열기'}'
-                                    : '${_isMenuVisible ? 'Hide' : 'Show'} Menu',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: localKr ? 18 : 16,
-                                    fontWeight: FontWeight.w500),
-                              )
-                            ],
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _isMenuVisible
+                                      ? Icons.expand_more_rounded
+                                      : Icons.expand_less_rounded,
+                                  color: Colors.white,
+                                  size: 35,
+                                ),
+                                SizedBox(
+                                  width: 10,
+                                ),
+                                Text(
+                                  localKr
+                                      ? '메뉴 ${_isMenuVisible ? '닫기' : '열기'}'
+                                      : '${_isMenuVisible ? 'Hide' : 'Show'} Menu',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: localKr ? 18 : 16,
+                                      fontWeight: FontWeight.w500),
+                                )
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  Container(
-                      height: 120, // 메뉴의 높이
-                      decoration: BoxDecoration(
-                        color: Color(0xFF141414).withOpacity(0.95),
-                      ),
-                      child: Row(
-                        children: [
-                          Semantics(
-                            value: 'hf_no_number',
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onTap: () {
-                                share(screenShareModel, authModel);
-                              },
-                              child: Semantics(
-                                value: 'hf_no_number',
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 20),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Image.asset(
-                                        'assets/icons/ic_cam.png',
-                                        width: 30,
-                                        height: 25,
-                                      ),
-                                      SizedBox(
-                                        height: 15,
-                                      ),
-                                      Text(
-                                        localKr
-                                            ? '화면 공유 ${screenShareModel == null ? '켜기' : screenShareModel.accountNo == widget.accountNo ? '끄기' : '켜기'}'
-                                            : 'Screen Share ${screenShareModel == null ? 'On' : screenShareModel.accountNo == widget.accountNo ? 'Off' : 'On'}',
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: localKr ? 18 : 16,
-                                            fontWeight: FontWeight.w600),
-                                      ),
-                                    ],
+                    Container(
+                        height: 120, // 메뉴의 높이
+                        decoration: BoxDecoration(
+                          color: Color(0xFF141414).withOpacity(0.95),
+                        ),
+                        child: Row(
+                          children: [
+                            Semantics(
+                              value: 'hf_no_number',
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.translucent,
+                                onTap: () {
+                                  share(screenShareModel, authModel);
+                                },
+                                child: Semantics(
+                                  value: 'hf_no_number',
+                                  child: Padding(
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 20),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Image.asset(
+                                          'assets/icons/ic_cam.png',
+                                          width: 30,
+                                          height: 25,
+                                        ),
+                                        SizedBox(
+                                          height: 15,
+                                        ),
+                                        Text(
+                                          localKr
+                                              ? '화면 공유 ${screenShareModel == null ? '켜기' : screenShareModel.accountNo == widget.accountNo ? '끄기' : '켜기'}'
+                                              : 'Screen Share ${screenShareModel == null ? 'On' : screenShareModel.accountNo == widget.accountNo ? 'Off' : 'On'}',
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: localKr ? 18 : 16,
+                                              fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                          Semantics(
-                            value: 'hf_no_number',
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onTap: () async {
-                                await _engine.muteLocalAudioStream(_myAudio);
+                            Semantics(
+                              value: 'hf_no_number',
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.translucent,
+                                onTap: () async {
+                                  await _engine.muteLocalAudioStream(_myAudio);
 
-                                setState(() {
-                                  _myAudio = !_myAudio;
-                                });
-                              },
-                              child: Semantics(
-                                value: 'hf_no_number',
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 20),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Image.asset(
-                                        _myAudio
-                                            ? 'assets/icons/ic_mic_on.png'
-                                            : 'assets/icons/ic_mic_off.png',
-                                        width: 30,
-                                        height: 30,
-                                      ),
-                                      SizedBox(
-                                        height: 10,
-                                      ),
-                                      Text(
-                                        localKr
-                                            ? '마이크 ${_myAudio ? '끄기' : '켜기'}'
-                                            : 'Mic ${_myAudio ? 'Off' : 'On'}',
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: localKr ? 18 : 16,
-                                            fontWeight: FontWeight.w600),
-                                      ),
-                                    ],
+                                  setState(() {
+                                    _myAudio = !_myAudio;
+                                  });
+                                },
+                                child: Semantics(
+                                  value: 'hf_no_number',
+                                  child: Padding(
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 20),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Image.asset(
+                                          _myAudio
+                                              ? 'assets/icons/ic_mic_on.png'
+                                              : 'assets/icons/ic_mic_off.png',
+                                          width: 30,
+                                          height: 30,
+                                        ),
+                                        SizedBox(
+                                          height: 10,
+                                        ),
+                                        Text(
+                                          localKr
+                                              ? '마이크 ${_myAudio ? '끄기' : '켜기'}'
+                                              : 'Mic ${_myAudio ? 'Off' : 'On'}',
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: localKr ? 18 : 16,
+                                              fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                          Semantics(
-                            value: 'hf_no_number',
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onTap: () async {
-                                capture();
-                              },
-                              child: Semantics(
-                                value: 'hf_no_number',
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 20),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Image.asset(
-                                        'assets/icons/ic_save.png',
-                                        width: 25,
-                                        height: 25,
-                                      ),
-                                      SizedBox(
-                                        height: 15,
-                                      ),
-                                      Text(
-                                        localKr ? '사진 저장' : 'Capture',
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: localKr ? 18 : 16,
-                                            fontWeight: FontWeight.w600),
-                                      ),
-                                    ],
+                            Semantics(
+                              value: 'hf_no_number',
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.translucent,
+                                onTap: () async {
+                                  capture();
+                                },
+                                child: Semantics(
+                                  value: 'hf_no_number',
+                                  child: Padding(
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 20),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Image.asset(
+                                          'assets/icons/ic_save.png',
+                                          width: 25,
+                                          height: 25,
+                                        ),
+                                        SizedBox(
+                                          height: 15,
+                                        ),
+                                        Text(
+                                          localKr ? '사진 저장' : 'Capture',
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: localKr ? 18 : 16,
+                                              fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                          Semantics(
-                            value: 'hf_no_number',
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onTap: () {
-                                setState(() {
-                                  _showChat = !_showChat;
-                                });
-                              },
-                              child: Semantics(
-                                value: 'hf_no_number',
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 20),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Image.asset(
-                                        'assets/icons/ic_chat.png',
-                                        width: 25,
-                                        height: 25,
-                                      ),
-                                      SizedBox(
-                                        height: 15,
-                                      ),
-                                      Text(
-                                        localKr
-                                            ? '채팅 ${_showChat ? '끄기' : '켜기'}'
-                                            : 'Chat ${_showChat ? 'Off' : 'On'}',
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: localKr ? 18 : 16,
-                                            fontWeight: FontWeight.w600),
-                                      ),
-                                    ],
+                            Semantics(
+                              value: 'hf_no_number',
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.translucent,
+                                onTap: () {
+                                  setState(() {
+                                    _showChat = !_showChat;
+                                  });
+                                },
+                                child: Semantics(
+                                  value: 'hf_no_number',
+                                  child: Padding(
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 20),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Image.asset(
+                                          'assets/icons/ic_chat.png',
+                                          width: 25,
+                                          height: 25,
+                                        ),
+                                        SizedBox(
+                                          height: 15,
+                                        ),
+                                        Text(
+                                          localKr
+                                              ? '채팅 ${_showChat ? '끄기' : '켜기'}'
+                                              : 'Chat ${_showChat ? 'Off' : 'On'}',
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: localKr ? 18 : 16,
+                                              fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                          Semantics(
-                            value: 'hf_no_number',
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onTap: () {
-                                setState(() {
-                                  isAmp = !isAmp;
-                                });
-                              },
-                              child: Semantics(
-                                value: 'hf_no_number',
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 20),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Image.asset(
-                                        'assets/icons/ic_megaphone.png',
-                                        width: 25,
-                                        height: 25,
-                                      ),
-                                      SizedBox(
-                                        height: 15,
-                                      ),
-                                      Text(
-                                        localKr
-                                            ? '증폭 ${isAmp ? '끄기' : '켜기'}'
-                                            : 'Noise Boost ${isAmp ? 'Off' : 'On'}',
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: localKr ? 18 : 16,
-                                            fontWeight: FontWeight.w600),
-                                      ),
-                                    ],
+                            Semantics(
+                              value: 'hf_no_number',
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.translucent,
+                                onTap: () async {
+                                  noiseBoost();
+                                },
+                                child: Semantics(
+                                  value: 'hf_no_number',
+                                  child: Padding(
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 20),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Image.asset(
+                                          'assets/icons/ic_megaphone.png',
+                                          width: 25,
+                                          height: 25,
+                                        ),
+                                        SizedBox(
+                                          height: 15,
+                                        ),
+                                        Text(
+                                          localKr
+                                              ? '증폭 ${isAmp ? '끄기' : '켜기'}'
+                                              : 'Noise Boost ${isAmp ? 'Off' : 'On'}',
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: localKr ? 18 : 16,
+                                              fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                          // SizedBox(
-                          //   width: 5,
-                          // ),
-                          // VerticalDivider(
-                          //   thickness: 2,
-                          //   indent: 20,
-                          //   endIndent: 20,
-                          //   color: Color(0xFF666666),
-                          // ),
-                          // SizedBox(
-                          //   width: 15,
-                          // ),
-                          // Row(
-                          //   children: [
-                          //     Text(
-                          //       localKr ? '배율' : 'Zoom',
-                          //       style: TextStyle(
-                          //           color: Colors.white,
-                          //           fontSize: localKr ? 22 : 20,
-                          //           fontWeight: FontWeight.w500),
-                          //     ),
-                          //     SizedBox(
-                          //       width: 10,
-                          //     ),
-                          //     for (int i = 0; i < 5; i++) ...[
-                          //       scaleWidget(i + 1),
-                          //       SizedBox(
-                          //         width: 10,
-                          //       ),
-                          //     ]
-                          //   ],
-                          // )
-                        ],
-                      )),
-                ],
+                            // SizedBox(
+                            //   width: 5,
+                            // ),
+                            // VerticalDivider(
+                            //   thickness: 2,
+                            //   indent: 20,
+                            //   endIndent: 20,
+                            //   color: Color(0xFF666666),
+                            // ),
+                            // SizedBox(
+                            //   width: 15,
+                            // ),
+                            // Row(
+                            //   children: [
+                            //     Text(
+                            //       localKr ? '배율' : 'Zoom',
+                            //       style: TextStyle(
+                            //           color: Colors.white,
+                            //           fontSize: localKr ? 22 : 20,
+                            //           fontWeight: FontWeight.w500),
+                            //     ),
+                            //     SizedBox(
+                            //       width: 10,
+                            //     ),
+                            //     for (int i = 0; i < 5; i++) ...[
+                            //       scaleWidget(i + 1),
+                            //       SizedBox(
+                            //         width: 10,
+                            //       ),
+                            //     ]
+                            //   ],
+                            // )
+                          ],
+                        )),
+                  ],
+                ),
               ),
-            ),
-            Positioned(
-              top: 10,
-              left: 10,
-              right: 10,
-              child: Row(
-                children: [
-                  Semantics(
-                    value: 'hf_no_number',
-                    child: GestureDetector(
-                      onTap: () {
-                        ref
-                            .read(inviteMemberInViewModelProvider.notifier)
-                            .getUninviteMemberList(
-                              meetId: model!.meetId!,
-                              companyNo: authModel.companyNo!,
-                              successFunc: () {
-                                context.push('/invite/in', extra: {
-                                  'meetId': model.meetId,
-                                  'subject': model.subject,
-                                });
-                              },
-                            );
-                      },
-                      child: Semantics(
-                        value: 'hf_no_number',
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Color(0xFF767676).withOpacity(0.8),
-                            borderRadius: BorderRadius.all(Radius.circular(50)),
-                          ),
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                          child: Row(
-                            children: [
-                              Image.asset(
-                                'assets/icons/ic_invite.png',
-                                width: 15,
-                                height: 15,
-                              ),
-                              SizedBox(
-                                width: 5,
-                              ),
-                              Text(
-                                localKr ? '초대하기' : 'Invite',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: localKr ? 18 : 16,
-                                    fontWeight: FontWeight.w500),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 10,
-                  ),
-                  Semantics(
-                    value: 'hf_no_number',
-                    child: GestureDetector(
-                      onTap: () async {
-                        flash(screenShareModel);
-                      },
-                      child: Semantics(
-                        value: 'hf_no_number',
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Color(0xFF767676).withOpacity(0.8),
-                            borderRadius: BorderRadius.all(Radius.circular(50)),
-                          ),
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                          child: Row(
-                            children: [
-                              Image.asset(
-                                'assets/icons/ic_flash.png',
-                                width: 20,
-                                height: 20,
-                              ),
-                              SizedBox(
-                                width: 5,
-                              ),
-                              Text(
-                                localKr
-                                    ? '플래시 ${isFlash ? '끄기' : '켜기'}'
-                                    : 'Flash ${isFlash ? 'Off' : 'On'}',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: localKr ? 18 : 16,
-                                    fontWeight: FontWeight.w500),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 10,
-                  ),
-                  Semantics(
-                    value: 'hf_no_number',
-                    child: GestureDetector(
-                      onTap: _record,
-                      child: Semantics(
-                        value: 'hf_no_number',
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Color(0xFF767676).withOpacity(0.8),
-                            borderRadius: BorderRadius.all(Radius.circular(50)),
-                          ),
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                          child: Row(
-                            children: [
-                              Image.asset(
-                                'assets/icons/ic_rec.png',
-                                width: 18,
-                                height: 18,
-                              ),
-                              SizedBox(
-                                width: 5,
-                              ),
-                              Text(
-                                localKr
-                                    ? '화면녹화 ${_recording ? '끄기' : '켜기'}'
-                                    : 'Screen Recording ${_recording ? 'Off' : 'On'}',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: localKr ? 18 : 16,
-                                    fontWeight: FontWeight.w500),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Spacer(),
-                  if (!_showChat) ...[
-                    //네트워크 변경
+              Positioned(
+                top: 10,
+                left: 10,
+                right: 10,
+                child: Row(
+                  children: [
                     Semantics(
                       value: 'hf_no_number',
                       child: GestureDetector(
                         onTap: () {
-                          context.push(
-                            '/dialog/network?isInRoom=true',
-                            extra: () async {
-                              await _leaveFunc();
-                            },
-                          ).then(
-                            (value) {
-                              rw();
-                            },
-                          );
+                          ref
+                              .read(inviteMemberInViewModelProvider.notifier)
+                              .getUninviteMemberList(
+                                meetId: model!.meetId!,
+                                companyNo: authModel.companyNo!,
+                                successFunc: () {
+                                  context.push('/invite/in', extra: {
+                                    'meetId': model.meetId,
+                                    'subject': model.subject,
+                                  });
+                                },
+                              );
                         },
                         child: Semantics(
                           value: 'hf_no_number',
@@ -1328,15 +1142,15 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
                             child: Row(
                               children: [
                                 Image.asset(
-                                  'assets/icons/ic_network.png',
-                                  width: 18,
-                                  height: 18,
+                                  'assets/icons/ic_invite.png',
+                                  width: 15,
+                                  height: 15,
                                 ),
                                 SizedBox(
                                   width: 5,
                                 ),
                                 Text(
-                                  localKr ? '네트워크 전환' : 'Change Network',
+                                  localKr ? '초대하기' : 'Invite',
                                   style: TextStyle(
                                       color: Colors.white,
                                       fontSize: localKr ? 18 : 16,
@@ -1354,12 +1168,14 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
                     Semantics(
                       value: 'hf_no_number',
                       child: GestureDetector(
-                        onTap: _leaveFunc,
+                        onTap: () async {
+                          flash(screenShareModel);
+                        },
                         child: Semantics(
                           value: 'hf_no_number',
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.red,
+                              color: Color(0xFF767676).withOpacity(0.8),
                               borderRadius:
                                   BorderRadius.all(Radius.circular(50)),
                             ),
@@ -1368,15 +1184,17 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
                             child: Row(
                               children: [
                                 Image.asset(
-                                  'assets/icons/ic_exit.png',
-                                  width: 18,
-                                  height: 18,
+                                  'assets/icons/ic_flash.png',
+                                  width: 20,
+                                  height: 20,
                                 ),
                                 SizedBox(
                                   width: 5,
                                 ),
                                 Text(
-                                  localKr ? '방 나가기' : 'Leave Room',
+                                  localKr
+                                      ? '플래시 ${isFlash ? '끄기' : '켜기'}'
+                                      : 'Flash ${isFlash ? 'Off' : 'On'}',
                                   style: TextStyle(
                                       color: Colors.white,
                                       fontSize: localKr ? 18 : 16,
@@ -1388,109 +1206,243 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
                         ),
                       ),
                     ),
-                  ],
-                ],
-              ),
-            ),
-            if (_showChat)
-              Positioned(
-                right: 0,
-                top: 0,
-                bottom: _isMenuVisible ? 120 : 0,
-                child: Container(
-                  width: 280,
-                  color: Color(0xFF111111).withOpacity(0.8),
-                  padding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Image.asset(
-                            'assets/icons/ic_chat.png',
-                            width: 20,
-                            height: 20,
-                          ),
-                          const SizedBox(
-                            width: 10,
-                          ),
-                          Text(
-                            'CHAT',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w500,
+                    SizedBox(
+                      width: 10,
+                    ),
+                    Semantics(
+                      value: 'hf_no_number',
+                      child: GestureDetector(
+                        onTap: _record,
+                        child: Semantics(
+                          value: 'hf_no_number',
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Color(0xFF767676).withOpacity(0.8),
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(50)),
+                            ),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 5),
+                            child: Row(
+                              children: [
+                                Image.asset(
+                                  'assets/icons/ic_rec.png',
+                                  width: 18,
+                                  height: 18,
+                                ),
+                                SizedBox(
+                                  width: 5,
+                                ),
+                                Text(
+                                  localKr
+                                      ? '화면녹화 ${_recording ? '끄기' : '켜기'}'
+                                      : 'Screen Recording ${_recording ? 'Off' : 'On'}',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: localKr ? 18 : 16,
+                                      fontWeight: FontWeight.w500),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
-                      SizedBox(height: 2.5),
-                      Expanded(
-                          child: ListView.builder(
-                        controller: _chatScrollController,
-                        itemCount: chatModelList.length,
-                        itemBuilder: (context, index) {
-                          Map<String, dynamic> colorData =
-                              jsonDecode(chatModelList[index].color!);
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '${chatModelList[index].sendMessage}',
-                                style: TextStyle(
-                                    color: chatModelList[index].socketId! ==
-                                                SocketManager()
-                                                    .getSocket()
-                                                    .id &&
-                                            chatModelList[index].color !=
-                                                jsonEncode({
-                                                  'r': 0,
-                                                  'g': 255,
-                                                  'b': 30,
-                                                  'a': 255,
-                                                })
-                                        ? Colors.white
-                                        : Color.fromARGB(
-                                            colorData['a'],
-                                            colorData['r'],
-                                            colorData['g'],
-                                            colorData['b'],
-                                          ),
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w400),
+                    ),
+                    Spacer(),
+                    if (!_showChat) ...[
+                      //네트워크 변경
+                      Semantics(
+                        value: 'hf_no_number',
+                        child: GestureDetector(
+                          onTap: () {
+                            context.push(
+                              '/dialog/network?isInRoom=true',
+                              extra: () async {
+                                await _leaveFunc();
+                              },
+                            ).then(
+                              (value) {
+                                rw2();
+                              },
+                            );
+                          },
+                          child: Semantics(
+                            value: 'hf_no_number',
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Color(0xFF767676).withOpacity(0.8),
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(50)),
                               ),
-                              const SizedBox(
-                                height: 2,
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 5),
+                              child: Row(
+                                children: [
+                                  Image.asset(
+                                    'assets/icons/ic_network.png',
+                                    width: 18,
+                                    height: 18,
+                                  ),
+                                  SizedBox(
+                                    width: 5,
+                                  ),
+                                  Text(
+                                    localKr ? '네트워크 전환' : 'Change Network',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: localKr ? 18 : 16,
+                                        fontWeight: FontWeight.w500),
+                                  ),
+                                ],
                               ),
-                              Text(
-                                '${chatModelList[index].sendTime} (UTC)',
-                                style: TextStyle(
-                                    color: const Color(0xFFA8A8A8),
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w400),
-                              )
-                            ],
-                          );
-                        },
-                      ))
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 10,
+                      ),
+                      Semantics(
+                        value: 'hf_no_number',
+                        child: GestureDetector(
+                          onTap: _leaveFunc,
+                          child: Semantics(
+                            value: 'hf_no_number',
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(50)),
+                              ),
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 5),
+                              child: Row(
+                                children: [
+                                  Image.asset(
+                                    'assets/icons/ic_exit.png',
+                                    width: 18,
+                                    height: 18,
+                                  ),
+                                  SizedBox(
+                                    width: 5,
+                                  ),
+                                  Text(
+                                    localKr ? '방 나가기' : 'Leave Room',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: localKr ? 18 : 16,
+                                        fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
+                  ],
+                ),
+              ),
+              if (_showChat)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: _isMenuVisible ? 120 : 0,
+                  child: Container(
+                    width: 280,
+                    color: Color(0xFF111111).withOpacity(0.8),
+                    padding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Image.asset(
+                              'assets/icons/ic_chat.png',
+                              width: 20,
+                              height: 20,
+                            ),
+                            const SizedBox(
+                              width: 10,
+                            ),
+                            Text(
+                              'CHAT',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 2.5),
+                        Expanded(
+                            child: ListView.builder(
+                          controller: _chatScrollController,
+                          itemCount: chatModelList.length,
+                          itemBuilder: (context, index) {
+                            Map<String, dynamic> colorData =
+                                jsonDecode(chatModelList[index].color!);
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '${chatModelList[index].sendMessage}',
+                                  style: TextStyle(
+                                      color: chatModelList[index].socketId! ==
+                                                  SocketManager()
+                                                      .getSocket()
+                                                      .id &&
+                                              chatModelList[index].color !=
+                                                  jsonEncode({
+                                                    'r': 0,
+                                                    'g': 255,
+                                                    'b': 30,
+                                                    'a': 255,
+                                                  })
+                                          ? Colors.white
+                                          : Color.fromARGB(
+                                              colorData['a'],
+                                              colorData['r'],
+                                              colorData['g'],
+                                              colorData['b'],
+                                            ),
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w400),
+                                ),
+                                const SizedBox(
+                                  height: 2,
+                                ),
+                                Text(
+                                  '${chatModelList[index].sendTime} (UTC)',
+                                  style: TextStyle(
+                                      color: const Color(0xFFA8A8A8),
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w400),
+                                )
+                              ],
+                            );
+                          },
+                        ))
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            if (_recording)
-              Positioned(
-                left: 10,
-                top: 50,
-                child: Text(
-                  _recordDuration(_recordTime),
-                  style: TextStyle(
-                      color: Colors.red,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w500),
+              if (_recording)
+                Positioned(
+                  left: 10,
+                  top: 50,
+                  child: Text(
+                    _recordDuration(_recordTime),
+                    style: TextStyle(
+                        color: Colors.red,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w500),
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1571,14 +1523,35 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
       ref.read(screenShareViewModelProvider.notifier).screenShareOff(
           accountNo: authModel.accountNo!, meetId: widget.meetId);
     } else {
+      Recog.setHandler(
+        (command) async {
+          switch (command) {
+            case '뒤로가기':
+            case '네':
+            case '취소':
+            case '닫기':
+            case 'Close':
+            case 'Cancel':
+            case 'Go Back':
+            case 'OK':
+              context.pop();
+              break;
+          }
+        },
+      );
+
       showDialog(
         context: context,
-        builder: (context) => NormalAlertDialog(
-          title: 'Another user is already sharing their screen.',
-          btnTitle: 'OK',
-          onTap: () {
-            context.pop();
-          },
+        builder: (context) => Semantics(
+          value: "hf_add_commands:뒤로가기|네|취소|닫기|Close|Cancel|Go Back|OK|",
+          child: NormalAlertDialog(
+            commands: "hf_add_commands:뒤로가기|네|취소|닫기|Close|Cancel|Go Back|OK|",
+            title: 'Another user is already sharing their screen.',
+            btnTitle: 'OK',
+            onTap: () {
+              context.pop();
+            },
+          ),
         ),
       );
     }
@@ -1614,21 +1587,55 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
     );
   }
 
+  noiseBoost() async {
+    setState(() {
+      isAmp = !isAmp;
+    });
+    if (isAmp) {
+      await _engine.adjustRecordingSignalVolume(400);
+      await _engine.adjustPlaybackSignalVolume(400);
+    } else {
+      await _engine.adjustRecordingSignalVolume(100);
+      await _engine.adjustPlaybackSignalVolume(100);
+    }
+  }
+
   flash(ScreenShareModel? screenShareModel) async {
     bool isSupport = await _engine.isCameraTorchSupported();
     if (isSupport) {
       if (screenShareModel != null &&
           screenShareModel.accountNo != widget.accountNo &&
           !isFlash) {
+        Recog.setHandler(
+          (command) async {
+            switch (command) {
+              case '뒤로가기':
+              case '네':
+              case '취소':
+              case '닫기':
+              case 'Close':
+              case 'Cancel':
+              case 'Go Back':
+              case 'OK':
+                context.pop();
+                break;
+            }
+          },
+        );
+
         showDialog(
           context: context,
-          builder: (context) => NormalAlertDialog(
-            title:
-                "Can't Turn On FlashLight (Can only be used when using the rear camera)",
-            btnTitle: 'OK',
-            onTap: () {
-              context.pop();
-            },
+          builder: (context) => Semantics(
+            value: "hf_add_commands:뒤로가기|네|취소|닫기|Close|Cancel|Go Back|OK|",
+            child: NormalAlertDialog(
+              commands: "hf_add_commands:뒤로가기|네|취소|닫기|Close|Cancel|Go Back|OK|",
+              title:
+                  "Can't Turn On FlashLight (Can only be used when using the rear camera)",
+              btnTitle: 'OK',
+              onTap: () {
+                context.pop();
+              },
+            ),
           ),
         );
       } else {
@@ -1638,15 +1645,36 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
         await _engine.setCameraTorchOn(isFlash);
       }
     } else {
+      Recog.setHandler(
+        (command) async {
+          switch (command) {
+            case '뒤로가기':
+            case '네':
+            case '취소':
+            case '닫기':
+            case 'Close':
+            case 'Cancel':
+            case 'Go Back':
+            case 'OK':
+              context.pop();
+              break;
+          }
+        },
+      );
+
       showDialog(
         context: context,
-        builder: (context) => NormalAlertDialog(
-          title:
-              "Can't Turn On FlashLight (Can only be used when using the rear camera)",
-          btnTitle: 'OK',
-          onTap: () {
-            context.pop();
-          },
+        builder: (context) => Semantics(
+          value: "hf_add_commands:뒤로가기|네|취소|닫기|Close|Cancel|Go Back|OK|",
+          child: NormalAlertDialog(
+            commands: "hf_add_commands:뒤로가기|네|취소|닫기|Close|Cancel|Go Back|OK|",
+            title:
+                "Can't Turn On FlashLight (Can only be used when using the rear camera)",
+            btnTitle: 'OK',
+            onTap: () {
+              context.pop();
+            },
+          ),
         ),
       );
     }
@@ -1671,8 +1699,6 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
     ref.read(conferenceViewModelProvider.notifier).init();
     ref.read(chatViewModelProvider.notifier).init();
     ref.read(drawViewModelProvider.notifier).init();
-
-    await _dispose();
 
     context.pop();
   }

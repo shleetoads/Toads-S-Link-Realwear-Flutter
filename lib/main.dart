@@ -5,12 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lepsi_rw_speech_recognizer/lepsi_rw_speech_recognizer.dart';
 import 'package:loader_overlay/loader_overlay.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:realwear_flutter/dataSource/socketManager.dart';
 import 'package:realwear_flutter/utils/appConfig.dart';
 import 'package:realwear_flutter/utils/myColors.dart';
+import 'package:realwear_flutter/utils/recog.dart';
 import 'package:realwear_flutter/viewModels/localeViewModel.dart';
 import 'package:realwear_flutter/views/conferenceDetailView.dart';
 import 'package:realwear_flutter/views/conferenceView.dart';
@@ -35,6 +35,8 @@ void main() async {
   await AppConfig.hideStatusNavigationBar();
 
   WakelockPlus.enable();
+
+  Recog();
 
   //네트워크 변경 아직 업데이트 안함 밑은 지워야함
   // SocketManager().connect(dotenv.env['BASE_URL']!);

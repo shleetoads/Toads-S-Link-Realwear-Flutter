@@ -9,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screen_recording/flutter_screen_recording.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lepsi_rw_speech_recognizer/lepsi_rw_speech_recognizer.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:realwear_flutter/dataSource/socketManager.dart';
 import 'package:realwear_flutter/models/authModel.dart';
@@ -22,6 +21,7 @@ import 'package:realwear_flutter/models/serverDrawModel.dart';
 import 'package:realwear_flutter/utils/appConfig.dart';
 import 'package:realwear_flutter/utils/myLoading.dart';
 import 'package:realwear_flutter/utils/myToasts.dart';
+import 'package:realwear_flutter/utils/recog.dart';
 import 'package:realwear_flutter/utils/signaturePainter.dart';
 import 'package:realwear_flutter/viewModels/authViewModel.dart';
 import 'package:realwear_flutter/viewModels/chatViewModel.dart';
@@ -144,8 +144,6 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
   void initState() {
     localKr = ref.read(localeViewModelProvider) == 'KOR';
 
-    rw();
-
     initWebRtc();
 
     super.initState();
@@ -161,181 +159,145 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
         });
       },
     );
-
-    // WidgetsBinding.instance.addPostFrameCallback((_) async {
-    //   await Future.delayed(const Duration(seconds: 1));
-    //   rw();
-    // });
   }
 
-  rw() {
-    LepsiRwSpeechRecognizer.setCommands(<String>[
-      '방 나가기',
-      'Leave Room',
-      '초대하기',
-      'Invite',
-      '플래시 켜기',
-      'Flash On',
-      '플래시 끄기',
-      'Flash Off',
-      '화면녹화 켜기',
-      'Screen Recording On',
-      '화면녹화 끄기',
-      'Screen Recording Off',
-      '메뉴 열기',
-      'Show Menu',
-      '메뉴 닫기',
-      'Hide Menu',
-      '마이크 켜기',
-      'Mike On',
-      '마이크 끄기',
-      'Mike Off',
-      '사진 저장',
-      'Capture',
-      '채팅 켜기',
-      'Chat On',
-      '채팅 끄기',
-      'Chat Off',
-      '뒤로가기',
-      'Navigate Back',
-      '네트워크 전환',
-      'Change Network',
-    ], (command) async {
-      logger.i(command);
-      switch (command) {
-        case '방 나가기':
-        case '뒤로가기':
-        case 'Leave Room':
-        case 'Navigate Back':
-          _leaveFunc();
-          break;
-        case '초대하기':
-        case 'Invite':
-          // await LepsiRwSpeechRecognizer.restoreCommands();
-          ConferenceModel? model = ref.read(conferenceViewModelProvider);
-          AuthModel authModel = ref.read(authViewModelProvider)!;
-          ref
-              .read(inviteMemberInViewModelProvider.notifier)
-              .getUninviteMemberList(
-                meetId: model!.meetId!,
-                companyNo: authModel.companyNo!,
-                successFunc: () {
-                  context.push('/invite/in', extra: {
-                    'meetId': model.meetId,
-                    'subject': model.subject,
-                  }).then(
-                    (value) async {
-                      if (value == null) {
-                        await Future.delayed(const Duration(milliseconds: 500));
-                        rw();
-                      }
-                    },
-                  );
-                },
-              );
+  rw2() {
+    Recog.setHandler(
+      (command) {
+        logger.i(command);
+        switch (command) {
+          case '방 나가기':
+          case '뒤로가기':
+          case 'Leave Room':
+          case 'Go Back':
+            _leaveFunc();
+            break;
+          case '초대하기':
+          case 'Invite':
+            // await LepsiRwSpeechRecognizer.restoreCommands();
+            ConferenceModel? model = ref.read(conferenceViewModelProvider);
+            AuthModel authModel = ref.read(authViewModelProvider)!;
+            ref
+                .read(inviteMemberInViewModelProvider.notifier)
+                .getUninviteMemberList(
+                  meetId: model!.meetId!,
+                  companyNo: authModel.companyNo!,
+                  successFunc: () {
+                    context.push('/invite/in', extra: {
+                      'meetId': model.meetId,
+                      'subject': model.subject,
+                    }).then(
+                      (value) async {
+                        if (value == null) {
+                          rw2();
+                        }
+                      },
+                    );
+                  },
+                );
 
-          break;
-        case '플래시 켜기':
-        case 'Flash On':
-          if (isFlash) {
             break;
-          }
-          flash();
-          await Future.delayed(const Duration(milliseconds: 1500));
-          rw();
-          break;
-        case '플래시 끄기':
-        case 'Flash Off':
-          if (!isFlash) {
-            break;
-          }
-          flash();
-          break;
-        case '화면녹화 켜기':
-        case 'Screen Recording On':
-          if (_recording) {
-            break;
-          }
-          _record();
-          break;
-        case '화면녹화 끄기':
-        case 'Screen Recording Off':
-          if (!_recording) {
-            break;
-          }
-          _record();
-          break;
-        case '메뉴 열기':
-        case 'Show Menu':
-          setState(() {
-            _isMenuVisible = true;
-          });
-          break;
-        case '메뉴 닫기':
-        case 'Hide Menu':
-          setState(() {
-            _isMenuVisible = false;
-          });
-          break;
+          case '플래시 켜기':
+          case 'Flash On':
+            if (isFlash) {
+              break;
+            }
+            flash();
 
-        case '마이크 켜기':
-        case 'Mike On':
-          if (_myAudio) {
             break;
-          }
-          setState(() {
-            _myAudio = !_myAudio;
-            // if (!_myAudio) _myVad = false;
-            _localStream?.getAudioTracks().forEach((track) {
-              track.enabled = _myAudio;
+          case '플래시 끄기':
+          case 'Flash Off':
+            if (!isFlash) {
+              break;
+            }
+            flash();
+            break;
+          case '화면녹화 켜기':
+          case 'Screen Recording On':
+            if (_recording) {
+              break;
+            }
+            _record();
+            break;
+          case '화면녹화 끄기':
+          case 'Screen Recording Off':
+            if (!_recording) {
+              break;
+            }
+            _record();
+            break;
+          case '메뉴 열기':
+          case 'Show Menu':
+            setState(() {
+              _isMenuVisible = true;
             });
-          });
-          break;
-        case '마이크 끄기':
-        case 'Mike Off':
-          if (!_myAudio) {
             break;
-          }
-          setState(() {
-            _myAudio = !_myAudio;
-            // if (!_myAudio) _myVad = false;
-            _localStream?.getAudioTracks().forEach((track) {
-              track.enabled = _myAudio;
+          case '메뉴 닫기':
+          case 'Hide Menu':
+            setState(() {
+              _isMenuVisible = false;
             });
-          });
-          break;
-        case '사진 저장':
-        case 'Capture':
-          capture();
-          break;
-        case '채팅 켜기':
-        case 'Chat On':
-          setState(() {
-            _showChat = true;
-          });
-          break;
-        case '채팅 끄기':
-        case 'Chat Off':
-          setState(() {
-            _showChat = false;
-          });
-          break;
+            break;
 
-        case '네트워크 전환':
-        case 'Change Network':
-          context.push(
-            '/dialog/network?isInRoom=true',
-            extra: () async {
-              await _leaveFunc();
-            },
-          ).then(
-            (value) {
-              rw();
-            },
-          );
-          break;
-      }
-    });
+          case '마이크 켜기':
+          case 'Mike On':
+            if (_myAudio) {
+              break;
+            }
+            setState(() {
+              _myAudio = !_myAudio;
+              // if (!_myAudio) _myVad = false;
+              _localStream?.getAudioTracks().forEach((track) {
+                track.enabled = _myAudio;
+              });
+            });
+            break;
+          case '마이크 끄기':
+          case 'Mike Off':
+            if (!_myAudio) {
+              break;
+            }
+            setState(() {
+              _myAudio = !_myAudio;
+              // if (!_myAudio) _myVad = false;
+              _localStream?.getAudioTracks().forEach((track) {
+                track.enabled = _myAudio;
+              });
+            });
+            break;
+          case '사진 저장':
+          case 'Capture':
+            capture();
+            break;
+          case '채팅 켜기':
+          case 'Chat On':
+            setState(() {
+              _showChat = true;
+            });
+            break;
+          case '채팅 끄기':
+          case 'Chat Off':
+            setState(() {
+              _showChat = false;
+            });
+            break;
+
+          case '네트워크 전환':
+          case 'Change Network':
+            context.push(
+              '/dialog/network?isInRoom=true',
+              extra: () async {
+                await _leaveFunc();
+              },
+            ).then(
+              (value) {
+                rw2();
+              },
+            );
+            break;
+        }
+      },
+    );
   }
 
   String? mySocketId = SocketManager().getSocket().id;
@@ -379,403 +341,278 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
       },
     );
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SizedBox(
-        width: double.infinity,
-        height: double.infinity,
-        child: Stack(
-          children: [
-            Center(
-              child: Container(
-                key: _screenSizeKey,
-                child: localRenderer == null
-                    ? Center(
-                        child: CircularProgressIndicator(
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Color(0xFF4A90DC)),
-                        ),
-                      )
-                    : AspectRatio(
-                        aspectRatio: 16 / 9,
-                        child: Screenshot(
-                          controller: _screenshotController,
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              final double width = constraints.maxWidth;
-                              final double height = constraints.maxHeight;
-
-                              return RepaintBoundary(
-                                child: CustomPaint(
-                                  isComplex: true,
-                                  willChange: false,
-                                  foregroundPainter:
-                                      SignaturePainter(_drawPoints),
-                                  size: Size(width, height), // 크기를 제한
-                                  child: RTCVideoView(
-                                    localRenderer!,
-                                  ),
-                                ),
-                              );
-                            },
+    return Semantics(
+      label:
+          "hf_add_commands:방 나가기|Leave Room|초대하기|Invite|플래시 켜기|Flash On|플래시 끄기|Flash Off|화면녹화 켜기|Screen Recording On|화면녹화 끄기|Screen Recording Off|메뉴 열기|Show Menu|메뉴 닫기|Hide Menu|마이크 켜기|Mike On|마이크 끄기|Mike Off|사진 저장|Capture|채팅 켜기|Chat On|채팅 끄기|Chat Off|뒤로가기|Go Back|네트워크 전환|Change Network|",
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Stack(
+            children: [
+              Center(
+                child: Container(
+                  key: _screenSizeKey,
+                  child: localRenderer == null
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                Color(0xFF4A90DC)),
                           ),
-                        ),
-                      ),
-              ),
-            ),
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 300), // 애니메이션 지속 시간
-              curve: Curves.easeInOut, // 애니메이션 효과
+                        )
+                      : AspectRatio(
+                          aspectRatio: 16 / 9,
+                          child: Screenshot(
+                            controller: _screenshotController,
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final double width = constraints.maxWidth;
+                                final double height = constraints.maxHeight;
 
-              // _isMenuVisible 값에 따라 메뉴의 'bottom' 위치를 변경
-              // true면 0(화면 맨 아래), false면 음수(화면 밖)
-              bottom: _isMenuVisible ? 0 : -120,
-              left: 0,
-              right: 0,
-
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Semantics(
-                    value: 'hf_no_number',
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onTap: () {
-                        setState(() {
-                          _isMenuVisible = !_isMenuVisible;
-                        });
-                      },
-                      child: Semantics(
-                        value: 'hf_no_number',
-                        child: Container(
-                          height: 40,
-                          padding: EdgeInsets.only(left: 10, right: 20),
-                          decoration: BoxDecoration(
-                            color: Color(0xFF141414).withOpacity(0.95),
-                            borderRadius: BorderRadius.only(
-                              topRight: Radius.circular(15),
+                                return RepaintBoundary(
+                                  child: CustomPaint(
+                                    isComplex: true,
+                                    willChange: false,
+                                    foregroundPainter:
+                                        SignaturePainter(_drawPoints),
+                                    size: Size(width, height), // 크기를 제한
+                                    child: RTCVideoView(
+                                      localRenderer!,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _isMenuVisible
-                                    ? Icons.expand_more_rounded
-                                    : Icons.expand_less_rounded,
-                                color: Colors.white,
-                                size: 35,
+                        ),
+                ),
+              ),
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 300), // 애니메이션 지속 시간
+                curve: Curves.easeInOut, // 애니메이션 효과
+
+                // _isMenuVisible 값에 따라 메뉴의 'bottom' 위치를 변경
+                // true면 0(화면 맨 아래), false면 음수(화면 밖)
+                bottom: _isMenuVisible ? 0 : -120,
+                left: 0,
+                right: 0,
+
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Semantics(
+                      value: 'hf_no_number',
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onTap: () {
+                          setState(() {
+                            _isMenuVisible = !_isMenuVisible;
+                          });
+                        },
+                        child: Semantics(
+                          value: 'hf_no_number',
+                          child: Container(
+                            height: 40,
+                            padding: EdgeInsets.only(left: 10, right: 20),
+                            decoration: BoxDecoration(
+                              color: Color(0xFF141414).withOpacity(0.95),
+                              borderRadius: BorderRadius.only(
+                                topRight: Radius.circular(15),
                               ),
-                              SizedBox(
-                                width: 10,
-                              ),
-                              Text(
-                                localKr
-                                    ? '메뉴 ${_isMenuVisible ? '닫기' : '열기'}'
-                                    : '${_isMenuVisible ? 'Hide' : 'Show'} Menu',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: localKr ? 18 : 16,
-                                    fontWeight: FontWeight.w500),
-                              )
-                            ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _isMenuVisible
+                                      ? Icons.expand_more_rounded
+                                      : Icons.expand_less_rounded,
+                                  color: Colors.white,
+                                  size: 35,
+                                ),
+                                SizedBox(
+                                  width: 10,
+                                ),
+                                Text(
+                                  localKr
+                                      ? '메뉴 ${_isMenuVisible ? '닫기' : '열기'}'
+                                      : '${_isMenuVisible ? 'Hide' : 'Show'} Menu',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: localKr ? 18 : 16,
+                                      fontWeight: FontWeight.w500),
+                                )
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  Container(
-                      height: 120, // 메뉴의 높이
-                      decoration: BoxDecoration(
-                        color: Color(0xFF141414).withOpacity(0.95),
-                      ),
-                      child: Row(
-                        children: [
-                          Semantics(
-                            value: 'hf_no_number',
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onTap: () async {
-                                setState(() {
-                                  _myAudio = !_myAudio;
-                                  // if (!_myAudio) _myVad = false;
-                                  _localStream
-                                      ?.getAudioTracks()
-                                      .forEach((track) {
-                                    track.enabled = _myAudio;
+                    Container(
+                        height: 120, // 메뉴의 높이
+                        decoration: BoxDecoration(
+                          color: Color(0xFF141414).withOpacity(0.95),
+                        ),
+                        child: Row(
+                          children: [
+                            Semantics(
+                              value: 'hf_no_number',
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.translucent,
+                                onTap: () async {
+                                  setState(() {
+                                    _myAudio = !_myAudio;
+                                    // if (!_myAudio) _myVad = false;
+                                    _localStream
+                                        ?.getAudioTracks()
+                                        .forEach((track) {
+                                      track.enabled = _myAudio;
+                                    });
                                   });
-                                });
-                              },
-                              child: Semantics(
-                                value: 'hf_no_number',
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 20),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Image.asset(
-                                        _myAudio
-                                            ? 'assets/icons/ic_mic_on.png'
-                                            : 'assets/icons/ic_mic_off.png',
-                                        width: 30,
-                                        height: 30,
-                                      ),
-                                      SizedBox(
-                                        height: 10,
-                                      ),
-                                      Text(
-                                        localKr
-                                            ? '마이크 ${_myAudio ? '끄기' : '켜기'}'
-                                            : 'Mic ${_myAudio ? 'Off' : 'On'}',
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: localKr ? 18 : 16,
-                                            fontWeight: FontWeight.w600),
-                                      ),
-                                    ],
+                                },
+                                child: Semantics(
+                                  value: 'hf_no_number',
+                                  child: Padding(
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 20),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Image.asset(
+                                          _myAudio
+                                              ? 'assets/icons/ic_mic_on.png'
+                                              : 'assets/icons/ic_mic_off.png',
+                                          width: 30,
+                                          height: 30,
+                                        ),
+                                        SizedBox(
+                                          height: 10,
+                                        ),
+                                        Text(
+                                          localKr
+                                              ? '마이크 ${_myAudio ? '끄기' : '켜기'}'
+                                              : 'Mic ${_myAudio ? 'Off' : 'On'}',
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: localKr ? 18 : 16,
+                                              fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                          Semantics(
-                            value: 'hf_no_number',
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onTap: () async {
-                                capture();
-                              },
-                              child: Semantics(
-                                value: 'hf_no_number',
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 20),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Image.asset(
-                                        'assets/icons/ic_save.png',
-                                        width: 25,
-                                        height: 25,
-                                      ),
-                                      SizedBox(
-                                        height: 15,
-                                      ),
-                                      Text(
-                                        localKr ? '사진 저장' : 'Capture',
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: localKr ? 18 : 16,
-                                            fontWeight: FontWeight.w600),
-                                      ),
-                                    ],
+                            Semantics(
+                              value: 'hf_no_number',
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.translucent,
+                                onTap: () async {
+                                  capture();
+                                },
+                                child: Semantics(
+                                  value: 'hf_no_number',
+                                  child: Padding(
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 20),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Image.asset(
+                                          'assets/icons/ic_save.png',
+                                          width: 25,
+                                          height: 25,
+                                        ),
+                                        SizedBox(
+                                          height: 15,
+                                        ),
+                                        Text(
+                                          localKr ? '사진 저장' : 'Capture',
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: localKr ? 18 : 16,
+                                              fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                          Semantics(
-                            value: 'hf_no_number',
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onTap: () {
-                                setState(() {
-                                  _showChat = !_showChat;
-                                });
-                              },
-                              child: Semantics(
-                                value: 'hf_no_number',
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 20),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Image.asset(
-                                        'assets/icons/ic_chat.png',
-                                        width: 25,
-                                        height: 25,
-                                      ),
-                                      SizedBox(
-                                        height: 15,
-                                      ),
-                                      Text(
-                                        localKr
-                                            ? '채팅 ${_showChat ? '끄기' : '켜기'}'
-                                            : 'Chat ${_showChat ? 'Off' : 'On'}',
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: localKr ? 18 : 16,
-                                            fontWeight: FontWeight.w600),
-                                      ),
-                                    ],
+                            Semantics(
+                              value: 'hf_no_number',
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.translucent,
+                                onTap: () {
+                                  setState(() {
+                                    _showChat = !_showChat;
+                                  });
+                                },
+                                child: Semantics(
+                                  value: 'hf_no_number',
+                                  child: Padding(
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 20),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Image.asset(
+                                          'assets/icons/ic_chat.png',
+                                          width: 25,
+                                          height: 25,
+                                        ),
+                                        SizedBox(
+                                          height: 15,
+                                        ),
+                                        Text(
+                                          localKr
+                                              ? '채팅 ${_showChat ? '끄기' : '켜기'}'
+                                              : 'Chat ${_showChat ? 'Off' : 'On'}',
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: localKr ? 18 : 16,
+                                              fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                          SizedBox(
-                            width: 5,
-                          ),
-                        ],
-                      )),
-                ],
+                            SizedBox(
+                              width: 5,
+                            ),
+                          ],
+                        )),
+                  ],
+                ),
               ),
-            ),
-            Positioned(
-              top: 10,
-              left: 10,
-              right: 10,
-              child: Row(
-                children: [
-                  Semantics(
-                    value: 'hf_no_number',
-                    child: GestureDetector(
-                      onTap: () {
-                        ref
-                            .read(inviteMemberInViewModelProvider.notifier)
-                            .getUninviteMemberList(
-                              meetId: model!.meetId!,
-                              companyNo: authModel.companyNo!,
-                              successFunc: () {
-                                context.push('/invite/in', extra: {
-                                  'meetId': model.meetId,
-                                  'subject': model.subject,
-                                });
-                              },
-                            );
-                      },
-                      child: Semantics(
-                        value: 'hf_no_number',
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Color(0xFF767676).withOpacity(0.8),
-                            borderRadius: BorderRadius.all(Radius.circular(50)),
-                          ),
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                          child: Row(
-                            children: [
-                              Image.asset(
-                                'assets/icons/ic_invite.png',
-                                width: 15,
-                                height: 15,
-                              ),
-                              SizedBox(
-                                width: 5,
-                              ),
-                              Text(
-                                localKr ? '초대하기' : 'Invite',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: localKr ? 18 : 16,
-                                    fontWeight: FontWeight.w500),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 10,
-                  ),
-                  Semantics(
-                    value: 'hf_no_number',
-                    child: GestureDetector(
-                      onTap: () async {
-                        flash();
-                      },
-                      child: Semantics(
-                        value: 'hf_no_number',
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Color(0xFF767676).withOpacity(0.8),
-                            borderRadius: BorderRadius.all(Radius.circular(50)),
-                          ),
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                          child: Row(
-                            children: [
-                              Image.asset(
-                                'assets/icons/ic_flash.png',
-                                width: 20,
-                                height: 20,
-                              ),
-                              SizedBox(
-                                width: 5,
-                              ),
-                              Text(
-                                localKr
-                                    ? '플래시 ${isFlash ? '끄기' : '켜기'}'
-                                    : 'Flash ${isFlash ? 'Off' : 'On'}',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: localKr ? 18 : 16,
-                                    fontWeight: FontWeight.w500),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 10,
-                  ),
-                  Semantics(
-                    value: 'hf_no_number',
-                    child: GestureDetector(
-                      onTap: _record,
-                      child: Semantics(
-                        value: 'hf_no_number',
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Color(0xFF767676).withOpacity(0.8),
-                            borderRadius: BorderRadius.all(Radius.circular(50)),
-                          ),
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                          child: Row(
-                            children: [
-                              Image.asset(
-                                'assets/icons/ic_rec.png',
-                                width: 18,
-                                height: 18,
-                              ),
-                              SizedBox(
-                                width: 5,
-                              ),
-                              Text(
-                                localKr
-                                    ? '화면녹화 ${_recording ? '끄기' : '켜기'}'
-                                    : 'Screen Recording ${_recording ? 'Off' : 'On'}',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: localKr ? 18 : 16,
-                                    fontWeight: FontWeight.w500),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Spacer(),
-                  if (!_showChat) ...[
-                    //네트워크 변경
+              Positioned(
+                top: 10,
+                left: 10,
+                right: 10,
+                child: Row(
+                  children: [
                     Semantics(
                       value: 'hf_no_number',
                       child: GestureDetector(
                         onTap: () {
-                          context.push(
-                            '/dialog/network?isInRoom=true',
-                            extra: () async {
-                              await _leaveFunc();
-                            },
-                          ).then(
-                            (value) {
-                              rw();
-                            },
-                          );
+                          ref
+                              .read(inviteMemberInViewModelProvider.notifier)
+                              .getUninviteMemberList(
+                                meetId: model!.meetId!,
+                                companyNo: authModel.companyNo!,
+                                successFunc: () {
+                                  context.push('/invite/in', extra: {
+                                    'meetId': model.meetId,
+                                    'subject': model.subject,
+                                  });
+                                },
+                              );
                         },
                         child: Semantics(
                           value: 'hf_no_number',
@@ -790,15 +627,15 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
                             child: Row(
                               children: [
                                 Image.asset(
-                                  'assets/icons/ic_network.png',
-                                  width: 18,
-                                  height: 18,
+                                  'assets/icons/ic_invite.png',
+                                  width: 15,
+                                  height: 15,
                                 ),
                                 SizedBox(
                                   width: 5,
                                 ),
                                 Text(
-                                  localKr ? '네트워크 전환' : 'Change Network',
+                                  localKr ? '초대하기' : 'Invite',
                                   style: TextStyle(
                                       color: Colors.white,
                                       fontSize: localKr ? 18 : 16,
@@ -816,12 +653,14 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
                     Semantics(
                       value: 'hf_no_number',
                       child: GestureDetector(
-                        onTap: _leaveFunc,
+                        onTap: () async {
+                          flash();
+                        },
                         child: Semantics(
                           value: 'hf_no_number',
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.red,
+                              color: Color(0xFF767676).withOpacity(0.8),
                               borderRadius:
                                   BorderRadius.all(Radius.circular(50)),
                             ),
@@ -830,15 +669,17 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
                             child: Row(
                               children: [
                                 Image.asset(
-                                  'assets/icons/ic_exit.png',
-                                  width: 18,
-                                  height: 18,
+                                  'assets/icons/ic_flash.png',
+                                  width: 20,
+                                  height: 20,
                                 ),
                                 SizedBox(
                                   width: 5,
                                 ),
                                 Text(
-                                  localKr ? '방 나가기' : 'Leave Room',
+                                  localKr
+                                      ? '플래시 ${isFlash ? '끄기' : '켜기'}'
+                                      : 'Flash ${isFlash ? 'Off' : 'On'}',
                                   style: TextStyle(
                                       color: Colors.white,
                                       fontSize: localKr ? 18 : 16,
@@ -850,109 +691,243 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
                         ),
                       ),
                     ),
-                  ],
-                ],
-              ),
-            ),
-            if (_showChat)
-              Positioned(
-                right: 0,
-                top: 0,
-                bottom: _isMenuVisible ? 120 : 0,
-                child: Container(
-                  width: 280,
-                  color: Color(0xFF111111).withOpacity(0.8),
-                  padding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Image.asset(
-                            'assets/icons/ic_chat.png',
-                            width: 20,
-                            height: 20,
-                          ),
-                          const SizedBox(
-                            width: 10,
-                          ),
-                          Text(
-                            'CHAT',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w500,
+                    SizedBox(
+                      width: 10,
+                    ),
+                    Semantics(
+                      value: 'hf_no_number',
+                      child: GestureDetector(
+                        onTap: _record,
+                        child: Semantics(
+                          value: 'hf_no_number',
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Color(0xFF767676).withOpacity(0.8),
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(50)),
+                            ),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 5),
+                            child: Row(
+                              children: [
+                                Image.asset(
+                                  'assets/icons/ic_rec.png',
+                                  width: 18,
+                                  height: 18,
+                                ),
+                                SizedBox(
+                                  width: 5,
+                                ),
+                                Text(
+                                  localKr
+                                      ? '화면녹화 ${_recording ? '끄기' : '켜기'}'
+                                      : 'Screen Recording ${_recording ? 'Off' : 'On'}',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: localKr ? 18 : 16,
+                                      fontWeight: FontWeight.w500),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
-                      SizedBox(height: 2.5),
-                      Expanded(
-                          child: ListView.builder(
-                        controller: _chatScrollController,
-                        itemCount: chatModelList.length,
-                        itemBuilder: (context, index) {
-                          Map<String, dynamic> colorData =
-                              jsonDecode(chatModelList[index].color!);
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '${chatModelList[index].sendMessage}',
-                                style: TextStyle(
-                                    color: chatModelList[index].socketId! ==
-                                                SocketManager()
-                                                    .getSocket()
-                                                    .id &&
-                                            chatModelList[index].color !=
-                                                jsonEncode({
-                                                  'r': 0,
-                                                  'g': 255,
-                                                  'b': 30,
-                                                  'a': 255,
-                                                })
-                                        ? Colors.white
-                                        : Color.fromARGB(
-                                            colorData['a'],
-                                            colorData['r'],
-                                            colorData['g'],
-                                            colorData['b'],
-                                          ),
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w400),
+                    ),
+                    Spacer(),
+                    if (!_showChat) ...[
+                      //네트워크 변경
+                      Semantics(
+                        value: 'hf_no_number',
+                        child: GestureDetector(
+                          onTap: () {
+                            context.push(
+                              '/dialog/network?isInRoom=true',
+                              extra: () async {
+                                await _leaveFunc();
+                              },
+                            ).then(
+                              (value) {
+                                rw2();
+                              },
+                            );
+                          },
+                          child: Semantics(
+                            value: 'hf_no_number',
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Color(0xFF767676).withOpacity(0.8),
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(50)),
                               ),
-                              const SizedBox(
-                                height: 2,
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 5),
+                              child: Row(
+                                children: [
+                                  Image.asset(
+                                    'assets/icons/ic_network.png',
+                                    width: 18,
+                                    height: 18,
+                                  ),
+                                  SizedBox(
+                                    width: 5,
+                                  ),
+                                  Text(
+                                    localKr ? '네트워크 전환' : 'Change Network',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: localKr ? 18 : 16,
+                                        fontWeight: FontWeight.w500),
+                                  ),
+                                ],
                               ),
-                              Text(
-                                '${chatModelList[index].sendTime} (UTC)',
-                                style: TextStyle(
-                                    color: const Color(0xFFA8A8A8),
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w400),
-                              )
-                            ],
-                          );
-                        },
-                      ))
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 10,
+                      ),
+                      Semantics(
+                        value: 'hf_no_number',
+                        child: GestureDetector(
+                          onTap: _leaveFunc,
+                          child: Semantics(
+                            value: 'hf_no_number',
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(50)),
+                              ),
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 5),
+                              child: Row(
+                                children: [
+                                  Image.asset(
+                                    'assets/icons/ic_exit.png',
+                                    width: 18,
+                                    height: 18,
+                                  ),
+                                  SizedBox(
+                                    width: 5,
+                                  ),
+                                  Text(
+                                    localKr ? '방 나가기' : 'Leave Room',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: localKr ? 18 : 16,
+                                        fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
+                  ],
+                ),
+              ),
+              if (_showChat)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: _isMenuVisible ? 120 : 0,
+                  child: Container(
+                    width: 280,
+                    color: Color(0xFF111111).withOpacity(0.8),
+                    padding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Image.asset(
+                              'assets/icons/ic_chat.png',
+                              width: 20,
+                              height: 20,
+                            ),
+                            const SizedBox(
+                              width: 10,
+                            ),
+                            Text(
+                              'CHAT',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 2.5),
+                        Expanded(
+                            child: ListView.builder(
+                          controller: _chatScrollController,
+                          itemCount: chatModelList.length,
+                          itemBuilder: (context, index) {
+                            Map<String, dynamic> colorData =
+                                jsonDecode(chatModelList[index].color!);
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '${chatModelList[index].sendMessage}',
+                                  style: TextStyle(
+                                      color: chatModelList[index].socketId! ==
+                                                  SocketManager()
+                                                      .getSocket()
+                                                      .id &&
+                                              chatModelList[index].color !=
+                                                  jsonEncode({
+                                                    'r': 0,
+                                                    'g': 255,
+                                                    'b': 30,
+                                                    'a': 255,
+                                                  })
+                                          ? Colors.white
+                                          : Color.fromARGB(
+                                              colorData['a'],
+                                              colorData['r'],
+                                              colorData['g'],
+                                              colorData['b'],
+                                            ),
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w400),
+                                ),
+                                const SizedBox(
+                                  height: 2,
+                                ),
+                                Text(
+                                  '${chatModelList[index].sendTime} (UTC)',
+                                  style: TextStyle(
+                                      color: const Color(0xFFA8A8A8),
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w400),
+                                )
+                              ],
+                            );
+                          },
+                        ))
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            if (_recording)
-              Positioned(
-                left: 10,
-                top: 50,
-                child: Text(
-                  _recordDuration(_recordTime),
-                  style: TextStyle(
-                      color: Colors.red,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w500),
+              if (_recording)
+                Positioned(
+                  left: 10,
+                  top: 50,
+                  child: Text(
+                    _recordDuration(_recordTime),
+                    style: TextStyle(
+                        color: Colors.red,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w500),
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -968,15 +943,36 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
         });
         await videoTrack.setTorch(isFlash);
       } else {
+        Recog.setHandler(
+          (command) async {
+            switch (command) {
+              case '뒤로가기':
+              case '네':
+              case '취소':
+              case '닫기':
+              case 'Close':
+              case 'Cancel':
+              case 'Go Back':
+              case 'OK':
+                context.pop();
+                break;
+            }
+          },
+        );
+
         showDialog(
           context: context,
-          builder: (context) => NormalAlertDialog(
-            title:
-                "Can't Turn On FlashLight (Can only be used when using the rear camera)",
-            btnTitle: 'OK',
-            onTap: () {
-              context.pop();
-            },
+          builder: (context) => Semantics(
+            value: "hf_add_commands:뒤로가기|네|취소|닫기|Close|Cancel|Go Back|OK|",
+            child: NormalAlertDialog(
+              commands: "hf_add_commands:뒤로가기|네|취소|닫기|Close|Cancel|Go Back|OK|",
+              title:
+                  "Can't Turn On FlashLight (Can only be used when using the rear camera)",
+              btnTitle: 'OK',
+              onTap: () {
+                context.pop();
+              },
+            ),
           ),
         );
       }
@@ -1113,6 +1109,8 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
     await localRenderer!.initialize();
 
     await sendOffer();
+
+    rw2();
 
     MyLoading().hideLoading(context);
 

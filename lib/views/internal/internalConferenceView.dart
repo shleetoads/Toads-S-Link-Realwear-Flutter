@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lepsi_rw_speech_recognizer/lepsi_rw_speech_recognizer.dart';
 import 'package:realwear_flutter/models/authModel.dart';
 import 'package:realwear_flutter/models/conferenceModel.dart';
 import 'package:realwear_flutter/utils/appConfig.dart';
@@ -9,6 +8,7 @@ import 'package:realwear_flutter/utils/createChannel.dart';
 import 'package:realwear_flutter/utils/myColors.dart';
 import 'package:realwear_flutter/utils/myLoading.dart';
 import 'package:realwear_flutter/utils/myToasts.dart';
+import 'package:realwear_flutter/utils/recog.dart';
 import 'package:realwear_flutter/viewModels/authViewModel.dart';
 import 'package:realwear_flutter/viewModels/changeNetworkCreateRoomViewModel.dart';
 import 'package:realwear_flutter/viewModels/conferenceListViewModel.dart';
@@ -48,12 +48,9 @@ class _InternalConferenceViewState
 
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // await LepsiRwSpeechRecognizer.restoreCommands();
-      rw();
-      await Future.delayed(const Duration(seconds: 2));
-      rw();
+    rw2();
 
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       bool? changeNetworkCreateRoomValue =
           ref.read(changeNetworkCreateRoomViewModelProvider);
 
@@ -105,7 +102,11 @@ class _InternalConferenceViewState
             'meetId': meetId,
             'accountNo': authModel.accountNo!,
             'companyNo': authModel.companyNo!,
-          });
+          }).then(
+            (value) {
+              rw2();
+            },
+          );
         },
         failFunc: () {
           ref
@@ -116,129 +117,102 @@ class _InternalConferenceViewState
         });
   }
 
-  rw() {
-    LepsiRwSpeechRecognizer.setCommands(<String>[
-      '방만들기',
-      'Create',
-      '로그아웃',
-      'Logout',
-      '다음',
-      'Next',
-      '이전',
-      'Previous',
-      '항목 1 입장',
-      'Join One',
-      '항목 2 입장',
-      'Join Two',
-      '항목 3 입장',
-      'Join Three',
-      '항목 4 입장',
-      'Join Four',
-      '항목 5 입장',
-      'Join Five',
-      '항목 6 입장',
-      'Join Six',
-      'Switch to English',
-      'Switch to Korean',
-      '네트워크 전환',
-      'Change Network',
-    ], (command) async {
-      logger.i(command);
-
-      //이전 다음 화면체크해야됨
-
-      switch (command) {
-        case '방만들기':
-        case 'Create':
-          // await LepsiRwSpeechRecognizer.restoreCommands();
-          context.push('/invite').then((value) async {
-            rw();
-          });
-          break;
-        case '로그아웃':
-        case 'Logout':
-          logout();
-          break;
-        case '다음':
-        case 'Next':
-          List<ConferenceModel> modelList =
-              ref.read(conferenceListViewModelProvider);
-          nextFunc(modelList.length);
-          break;
-        case '이전':
-        case 'Previous':
-          prevFunc();
-          break;
-        case '항목 1 입장':
-        case 'Join One':
-          List<ConferenceModel> modelList =
-              ref.read(conferenceListViewModelProvider);
-
-          if (modelList.isNotEmpty) {
-            goConference(modelList[nowPage == 0 ? 0 : nowPage * perPage - 1]);
-          }
-
-          break;
-        case '항목 2 입장':
-        case 'Join Two':
-          List<ConferenceModel> modelList =
-              ref.read(conferenceListViewModelProvider);
-          if (modelList.length > 1) {
-            goConference(modelList[nowPage == 0 ? 1 : nowPage * perPage]);
-          }
-          break;
-        case '항목 3 입장':
-        case 'Join Three':
-          List<ConferenceModel> modelList =
-              ref.read(conferenceListViewModelProvider);
-          if (modelList.length > 2) {
-            goConference(modelList[nowPage == 0 ? 2 : nowPage * perPage + 1]);
-          }
-          break;
-        case '항목 4 입장':
-        case 'Join Four':
-          List<ConferenceModel> modelList =
-              ref.read(conferenceListViewModelProvider);
-          if (modelList.length > 3) {
-            goConference(modelList[nowPage == 0 ? 3 : nowPage * perPage + 2]);
-          }
-          break;
-        case '항목 5 입장':
-        case 'Join Five':
-          List<ConferenceModel> modelList =
-              ref.read(conferenceListViewModelProvider);
-          if (modelList.length > 4) {
-            goConference(modelList[nowPage == 0 ? 4 : nowPage * perPage + 3]);
-          }
-          break;
-        case '항목 6 입장':
-        case 'Join Six':
-          if (nowPage == 0) {
+  rw2() {
+    Recog.setHandler(
+      (command) {
+        logger.i(command);
+        switch (command) {
+          case '방 만들기':
+          case 'Create':
+            context.push('/invite').then((value) async {
+              rw2();
+            });
             break;
-          }
-          List<ConferenceModel> modelList =
-              ref.read(conferenceListViewModelProvider);
-          if (modelList.length > 5) {
-            goConference(modelList[nowPage * perPage + 4]);
-          }
-          break;
+          case '로그아웃':
+          case 'Logout':
+            logout();
+            break;
+          case '다음':
+          case 'Next':
+            List<ConferenceModel> modelList =
+                ref.read(conferenceListViewModelProvider);
+            nextFunc(modelList.length);
+            break;
+          case '이전':
+          case 'Previous':
+            prevFunc();
+            break;
+          case '항목 1 입장':
+          case 'Join One':
+            List<ConferenceModel> modelList =
+                ref.read(conferenceListViewModelProvider);
 
-        case 'Switch to English':
-        case 'Switch to Korean':
-          switchLocale();
-          break;
+            if (modelList.isNotEmpty) {
+              goConference(modelList[nowPage == 0 ? 0 : nowPage * perPage - 1]);
+            }
 
-        case 'Change Network':
-        case '네트워크 전환':
-          context.push('/dialog/network?isInRoom=false').then(
-            (value) {
-              rw();
-            },
-          );
+            break;
+          case '항목 2 입장':
+          case 'Join Two':
+            List<ConferenceModel> modelList =
+                ref.read(conferenceListViewModelProvider);
+            if (modelList.length > 1) {
+              goConference(modelList[nowPage == 0 ? 1 : nowPage * perPage]);
+            }
+            break;
+          case '항목 3 입장':
+          case 'Join Three':
+            List<ConferenceModel> modelList =
+                ref.read(conferenceListViewModelProvider);
+            if (modelList.length > 2) {
+              goConference(modelList[nowPage == 0 ? 2 : nowPage * perPage + 1]);
+            }
+            break;
+          case '항목 4 입장':
+          case 'Join Four':
+            List<ConferenceModel> modelList =
+                ref.read(conferenceListViewModelProvider);
+            if (modelList.length > 3) {
+              goConference(modelList[nowPage == 0 ? 3 : nowPage * perPage + 2]);
+            }
+            break;
+          case '항목 5 입장':
+          case 'Join Five':
+            List<ConferenceModel> modelList =
+                ref.read(conferenceListViewModelProvider);
+            if (modelList.length > 4) {
+              goConference(modelList[nowPage == 0 ? 4 : nowPage * perPage + 3]);
+            }
+            break;
+          case '항목 6 입장':
+          case 'Join Six':
+            if (nowPage == 0) {
+              break;
+            }
+            List<ConferenceModel> modelList =
+                ref.read(conferenceListViewModelProvider);
+            if (modelList.length > 5) {
+              goConference(modelList[nowPage * perPage + 4]);
+            }
+            break;
 
-          break;
-      }
-    });
+          case 'Switch to English':
+          case 'Switch to Korean':
+            switchLocale();
+            break;
+
+          case 'Change Network':
+          case '네트워크 전환':
+            context.push('/dialog/network?isInRoom=false').then(
+              (value) {
+                rw2();
+              },
+            );
+
+            break;
+        }
+      },
+    );
   }
 
   @override
@@ -260,320 +234,334 @@ class _InternalConferenceViewState
     AuthModel? authModel = ref.watch(authViewModelProvider);
     List<ConferenceModel> modelList =
         ref.watch(conferenceListViewModelProvider);
-    return Scaffold(
-      backgroundColor: Color(0xFF181820),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Image.asset(
-                  'assets/icons/ic_logo.png',
-                  width: 17,
-                ),
-                SizedBox(
-                  width: 10,
-                ),
-                Text(
-                  'Internal Conference',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600),
-                ),
-                Spacer(),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 15,
-                    ),
-                    Image.asset(
-                      'assets/icons/ic_voice.png',
-                      width: 30,
-                      height: 30,
-                    ),
-                    SizedBox(
-                      width: 10,
-                    ),
-                    Text(
-                      'Switch to ${localKr ? 'English' : "Korean"}',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500),
-                    ),
-                    SizedBox(
-                      width: 10,
-                    )
-                  ],
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[800],
-                    borderRadius: BorderRadius.circular(50),
+    return Semantics(
+      label:
+          "hf_add_commands:방 만들기|Create|로그아웃|Logout|다음|Next|이전|Previous|항목 1 입장|항목 2 입장|항목 3 입장|항목 4 입장|항목 5 입장|항목 6 입장|Join One|Join Two|Join Three|Join Four|Join Five|Join Six|Switch to English|Switch to Korean|네트워크 전환|Change Network|",
+      child: Scaffold(
+        backgroundColor: Color(0xFF181820),
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Image.asset(
+                    'assets/icons/ic_logo.png',
+                    width: 17,
                   ),
-                  padding: const EdgeInsets.all(3),
-                  child: Row(
+                  SizedBox(
+                    width: 10,
+                  ),
+                  Text(
+                    'Internal Conference',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600),
+                  ),
+                  Spacer(),
+                  Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Semantics(
-                        value: 'hf_no_number',
-                        child: GestureDetector(
-                          onTap: switchLocale,
-                          child: Semantics(
-                            value: 'hf_no_number',
-                            child: localKr
-                                ? Container(
-                                    decoration: BoxDecoration(
-                                        border: Border.all(
-                                            color: const Color(0xFFDAE9FF),
-                                            width: 1),
-                                        borderRadius: BorderRadius.circular(50),
-                                        color: Colors.white),
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 6, horizontal: 26),
-                                    child: const Text(
-                                      'KOR',
-                                      style: TextStyle(
-                                          color: Color(0xFF21385C),
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500),
-                                    ),
-                                  )
-                                : Container(
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                          color: Colors.transparent, width: 1),
-                                    ),
-                                    padding: const EdgeInsets.only(
-                                        top: 6, bottom: 6, left: 26, right: 15),
-                                    child: const Text(
-                                      'KOR',
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w400),
-                                    ),
-                                  ),
-                          ),
-                        ),
+                      SizedBox(
+                        width: 15,
                       ),
-                      Semantics(
-                        value: 'hf_no_number',
-                        child: GestureDetector(
-                          onTap: switchLocale,
-                          child: Semantics(
-                            value: 'hf_no_number',
-                            child: !localKr
-                                ? Container(
-                                    decoration: BoxDecoration(
-                                        border: Border.all(
-                                            color: const Color(0xFFDAE9FF),
-                                            width: 1),
-                                        borderRadius: BorderRadius.circular(50),
-                                        color: Colors.white),
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 6, horizontal: 26),
-                                    child: const Text(
-                                      'ENG',
-                                      style: TextStyle(
-                                          color: Color(0xFF21385C),
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500),
-                                    ),
-                                  )
-                                : Container(
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                          color: Colors.transparent, width: 1),
-                                    ),
-                                    padding: const EdgeInsets.only(
-                                        top: 6, bottom: 6, left: 15, right: 26),
-                                    child: const Text(
-                                      'ENG',
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w400),
-                                    ),
-                                  ),
-                          ),
-                        ),
+                      Image.asset(
+                        'assets/icons/ic_voice.png',
+                        width: 30,
+                        height: 30,
+                      ),
+                      SizedBox(
+                        width: 10,
+                      ),
+                      Text(
+                        'Switch to ${localKr ? 'English' : "Korean"}',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500),
+                      ),
+                      SizedBox(
+                        width: 10,
                       )
                     ],
                   ),
-                ),
-                Spacer(),
-                Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFD6E4FA),
-                    shape: BoxShape.circle,
-                  ),
-                  padding: const EdgeInsets.all(12),
-                  child: Text(
-                    authModel != null
-                        ? authModel.userName!.substring(0, 1)
-                        : '',
-                    style: const TextStyle(
-                      color: Color(0xFF6583B2),
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[800],
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                    padding: const EdgeInsets.all(3),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Semantics(
+                          value: 'hf_no_number',
+                          child: GestureDetector(
+                            onTap: switchLocale,
+                            child: Semantics(
+                              value: 'hf_no_number',
+                              child: localKr
+                                  ? Container(
+                                      decoration: BoxDecoration(
+                                          border: Border.all(
+                                              color: const Color(0xFFDAE9FF),
+                                              width: 1),
+                                          borderRadius:
+                                              BorderRadius.circular(50),
+                                          color: Colors.white),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 6, horizontal: 26),
+                                      child: const Text(
+                                        'KOR',
+                                        style: TextStyle(
+                                            color: Color(0xFF21385C),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500),
+                                      ),
+                                    )
+                                  : Container(
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                            color: Colors.transparent,
+                                            width: 1),
+                                      ),
+                                      padding: const EdgeInsets.only(
+                                          top: 6,
+                                          bottom: 6,
+                                          left: 26,
+                                          right: 15),
+                                      child: const Text(
+                                        'KOR',
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w400),
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ),
+                        Semantics(
+                          value: 'hf_no_number',
+                          child: GestureDetector(
+                            onTap: switchLocale,
+                            child: Semantics(
+                              value: 'hf_no_number',
+                              child: !localKr
+                                  ? Container(
+                                      decoration: BoxDecoration(
+                                          border: Border.all(
+                                              color: const Color(0xFFDAE9FF),
+                                              width: 1),
+                                          borderRadius:
+                                              BorderRadius.circular(50),
+                                          color: Colors.white),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 6, horizontal: 26),
+                                      child: const Text(
+                                        'ENG',
+                                        style: TextStyle(
+                                            color: Color(0xFF21385C),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500),
+                                      ),
+                                    )
+                                  : Container(
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                            color: Colors.transparent,
+                                            width: 1),
+                                      ),
+                                      padding: const EdgeInsets.only(
+                                          top: 6,
+                                          bottom: 6,
+                                          left: 15,
+                                          right: 26),
+                                      child: const Text(
+                                        'ENG',
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w400),
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        )
+                      ],
                     ),
                   ),
-                ),
-                SizedBox(
-                  width: 10,
-                ),
-                Flexible(
-                  child: Text(
-                    authModel != null ? authModel.userName! : '',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      overflow: TextOverflow.ellipsis,
+                  Spacer(),
+                  Container(
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFD6E4FA),
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      authModel != null
+                          ? authModel.userName!.substring(0, 1)
+                          : '',
+                      style: const TextStyle(
+                        color: Color(0xFF6583B2),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            SizedBox(
-              height: 15,
-            ),
-            Expanded(
-              child: GridView.builder(
-                physics: NeverScrollableScrollPhysics(), // 스크롤 비활성화
-                shrinkWrap: true, // 내용 크기만큼만 차지
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 80,
-                    mainAxisSpacing: 10,
-                    childAspectRatio: 1.4),
-                itemBuilder: (context, index) {
-                  return index == 0 && nowPage == 0
-                      ? _emptyWidget()
-                      : _conferenceWidget(
-                          modelList[nowPage == 0
-                              ? (index - 1)
-                              : (nowPage * perPage + index - 1)],
-                          localKr
-                              ? ('항목 ${nowPage == 0 ? index : index + 1} 입장')
-                              : ('Join ${nowPage == 0 ? index : index + 1}'));
-                },
-                itemCount: itemsInPage(nowPage, modelList.length + 1),
-              ),
-            ),
-            SizedBox(
-              height: 30,
-            ),
-            Row(
-              children: [
-                if (nowPage != 0) ...[
-                  _leftPageWidget(),
                   SizedBox(
-                    width: 30,
+                    width: 10,
+                  ),
+                  Flexible(
+                    child: Text(
+                      authModel != null ? authModel.userName! : '',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
                 ],
-                if (nowPage < ((modelList.length + 1) / perPage).ceil() - 1 &&
-                    (modelList.length + 1) >= perPage) ...[
-                  _rightPageWidget(modelList.length),
+              ),
+              SizedBox(
+                height: 15,
+              ),
+              Expanded(
+                child: GridView.builder(
+                  physics: NeverScrollableScrollPhysics(), // 스크롤 비활성화
+                  shrinkWrap: true, // 내용 크기만큼만 차지
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 80,
+                      mainAxisSpacing: 10,
+                      childAspectRatio: 1.4),
+                  itemBuilder: (context, index) {
+                    return index == 0 && nowPage == 0
+                        ? _emptyWidget()
+                        : _conferenceWidget(
+                            modelList[nowPage == 0
+                                ? (index - 1)
+                                : (nowPage * perPage + index - 1)],
+                            localKr
+                                ? ('항목 ${nowPage == 0 ? index : index + 1} 입장')
+                                : ('Join ${nowPage == 0 ? index : index + 1}'));
+                  },
+                  itemCount: itemsInPage(nowPage, modelList.length + 1),
+                ),
+              ),
+              SizedBox(
+                height: 30,
+              ),
+              Row(
+                children: [
+                  if (nowPage != 0) ...[
+                    _leftPageWidget(),
+                    SizedBox(
+                      width: 30,
+                    ),
+                  ],
+                  if (nowPage < ((modelList.length + 1) / perPage).ceil() - 1 &&
+                      (modelList.length + 1) >= perPage) ...[
+                    _rightPageWidget(modelList.length),
+                  ],
+                  Spacer(),
+                  //네트워크 변경
+                  SizedBox(
+                    width: 200,
+                    height: 45,
+                    child: Semantics(
+                      value: 'hf_no_number',
+                      child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            elevation: 0.0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8.0),
+                            ),
+                            backgroundColor: Colors.grey,
+                            padding: EdgeInsets.zero,
+                          ),
+                          onPressed: () {
+                            context.push('/dialog/network?isInRoom=false').then(
+                              (value) {
+                                rw2();
+                              },
+                            );
+                          },
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Image.asset(
+                                'assets/icons/ic_network.png',
+                                width: 20,
+                                height: 20,
+                              ),
+                              SizedBox(
+                                width: 10,
+                              ),
+                              Text(
+                                localKr ? '네트워크 전환' : 'Change Network',
+                                style: TextStyle(
+                                    letterSpacing: -0.5,
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          )),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 20,
+                  ),
+                  SizedBox(
+                    width: 150,
+                    height: 45,
+                    child: Semantics(
+                      value: 'hf_no_number',
+                      child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            elevation: 0.0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8.0),
+                            ),
+                            backgroundColor: const Color(0xFF246CFD),
+                            padding: EdgeInsets.zero,
+                          ),
+                          onPressed: () {
+                            logout();
+                          },
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Image.asset(
+                                'assets/icons/ic_logout.png',
+                                width: 20,
+                                height: 20,
+                              ),
+                              SizedBox(
+                                width: 10,
+                              ),
+                              Text(
+                                'Logout',
+                                style: TextStyle(
+                                    letterSpacing: -0.5,
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          )),
+                    ),
+                  )
                 ],
-                Spacer(),
-                //네트워크 변경
-                SizedBox(
-                  width: 200,
-                  height: 45,
-                  child: Semantics(
-                    value: 'hf_no_number',
-                    child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          elevation: 0.0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8.0),
-                          ),
-                          backgroundColor: Colors.grey,
-                          padding: EdgeInsets.zero,
-                        ),
-                        onPressed: () {
-                          context.push('/dialog/network?isInRoom=false').then(
-                            (value) {
-                              rw();
-                            },
-                          );
-                        },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Image.asset(
-                              'assets/icons/ic_network.png',
-                              width: 20,
-                              height: 20,
-                            ),
-                            SizedBox(
-                              width: 10,
-                            ),
-                            Text(
-                              localKr ? '네트워크 전환' : 'Change Network',
-                              style: TextStyle(
-                                  letterSpacing: -0.5,
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        )),
-                  ),
-                ),
-                SizedBox(
-                  width: 20,
-                ),
-                SizedBox(
-                  width: 150,
-                  height: 45,
-                  child: Semantics(
-                    value: 'hf_no_number',
-                    child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          elevation: 0.0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8.0),
-                          ),
-                          backgroundColor: const Color(0xFF246CFD),
-                          padding: EdgeInsets.zero,
-                        ),
-                        onPressed: () {
-                          logout();
-                        },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Image.asset(
-                              'assets/icons/ic_logout.png',
-                              width: 20,
-                              height: 20,
-                            ),
-                            SizedBox(
-                              width: 10,
-                            ),
-                            Text(
-                              'Logout',
-                              style: TextStyle(
-                                  letterSpacing: -0.5,
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        )),
-                  ),
-                )
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -705,112 +693,106 @@ class _InternalConferenceViewState
   goConference(ConferenceModel model) async {
     AuthModel? authModel = ref.read(authViewModelProvider);
     if (authModel != null) {
-      // await LepsiRwSpeechRecognizer.restoreCommands();
+      Recog.setHandler(
+        (command) {
+          switch (command) {
+            case '네':
+            case 'OK':
+              MyLoading().showLoading(context);
 
-      LepsiRwSpeechRecognizer.setCommands(<String>[
-        '네',
-        'Okay',
-        '취소',
-        'Cancel',
-      ], (command) async {
-        logger.i(command);
+              ref.read(conferenceViewModelProvider.notifier).joinRoom(
+                  meetId: model.meetId!,
+                  accountNo: authModel.accountNo!,
+                  userName: authModel.userName!,
+                  companyNo: authModel.companyNo!,
+                  successFunc: () async {
+                    // 이 룸정보 넣어줘야될듯
 
-        //이전 다음 화면체크해야됨
+                    ref
+                        .read(conferenceViewModelProvider.notifier)
+                        .init(model: model);
 
-        switch (command) {
-          case '네':
-          case 'Okay':
-            MyLoading().showLoading(context);
+                    context.pop(true);
 
-            ref.read(conferenceViewModelProvider.notifier).joinRoom(
-                meetId: model.meetId!,
-                accountNo: authModel.accountNo!,
-                userName: authModel.userName!,
-                companyNo: authModel.companyNo!,
-                successFunc: () async {
-                  // 이 룸정보 넣어줘야될듯
+                    context.push('/internal/detail', extra: {
+                      'meetId': model.meetId!,
+                      'accountNo': authModel.accountNo!,
+                      'companyNo': authModel.companyNo!,
+                    }).then(
+                      (_) async {
+                        rw2();
+                      },
+                    );
+                  },
+                  failFunc: () async {
+                    MyToasts().showNormal('This is a closed meeting.');
+                    MyLoading().hideLoading(context);
+                    context.pop();
+                  });
+              break;
 
-                  ref
-                      .read(conferenceViewModelProvider.notifier)
-                      .init(model: model);
-
-                  context.pop(true);
-
-                  // await AppConfig.hideStatusNavigationBar();
-
-                  // await LepsiRwSpeechRecognizer.restoreCommands();
-
-                  context.push('/internal/detail', extra: {
-                    'meetId': model.meetId!,
-                    'accountNo': authModel.accountNo!,
-                    'companyNo': authModel.companyNo!,
-                  }).then(
-                    (_) {
-                      rw();
-                    },
-                  );
-                },
-                failFunc: () async {
-                  MyToasts().showNormal('This is a closed meeting.');
-                  MyLoading().hideLoading(context);
-                  context.pop();
-                });
-            break;
-
-          case '취소':
-          case 'Cancel':
-            context.pop();
-            break;
-        }
-      });
+            case '뒤로가기':
+            case '취소':
+            case '닫기':
+            case 'Close':
+            case 'Cancel':
+            case 'Go Back':
+              context.pop();
+          }
+        },
+      );
 
       showDialog(
         context: context,
-        builder: (context) => NormalAlertDialog(
-          title: 'Wolud you like to join this meeting room?',
-          btnTitle: 'OK',
-          onTap: () {
-            MyLoading().showLoading(context);
+        builder: (context) => Semantics(
+          value: "hf_add_commands:뒤로가기|네|취소|닫기|Close|Cancel|Go Back|OK|",
+          child: NormalAlertDialog(
+            commands: "hf_add_commands:뒤로가기|네|취소|닫기|Close|Cancel|Go Back|OK|",
+            title: 'Wolud you like to join this meeting room?',
+            btnTitle: 'OK',
+            onTap: () {
+              MyLoading().showLoading(context);
 
-            ref.read(conferenceViewModelProvider.notifier).joinRoom(
-                meetId: model.meetId!,
-                accountNo: authModel.accountNo!,
-                userName: authModel.userName!,
-                companyNo: authModel.companyNo!,
-                successFunc: () async {
-                  // 이 룸정보 넣어줘야될듯
+              ref.read(conferenceViewModelProvider.notifier).joinRoom(
+                  meetId: model.meetId!,
+                  accountNo: authModel.accountNo!,
+                  userName: authModel.userName!,
+                  companyNo: authModel.companyNo!,
+                  successFunc: () async {
+                    // 이 룸정보 넣어줘야될듯
 
-                  ref
-                      .read(conferenceViewModelProvider.notifier)
-                      .init(model: model);
+                    ref
+                        .read(conferenceViewModelProvider.notifier)
+                        .init(model: model);
 
-                  context.pop(true);
+                    context.pop(true);
 
-                  // await AppConfig.hideStatusNavigationBar();
+                    // await AppConfig.hideStatusNavigationBar();
 
-                  // await LepsiRwSpeechRecognizer.restoreCommands();
+                    // await LepsiRwSpeechRecognizer.restoreCommands();
 
-                  context.push('/internal/detail', extra: {
-                    'meetId': model.meetId!,
-                    'accountNo': authModel.accountNo!,
-                    'companyNo': authModel.companyNo!,
-                  }).then(
-                    (_) {
-                      rw();
-                    },
-                  );
-                },
-                failFunc: () {
-                  MyToasts().showNormal('This is a closed meeting.');
-                  MyLoading().hideLoading(context);
-                  context.pop();
-                });
-          },
+                    context.push('/internal/detail', extra: {
+                      'meetId': model.meetId!,
+                      'accountNo': authModel.accountNo!,
+                      'companyNo': authModel.companyNo!,
+                    }).then(
+                      (_) async {
+                        rw2();
+                      },
+                    );
+                  },
+                  failFunc: () {
+                    MyToasts().showNormal('This is a closed meeting.');
+                    MyLoading().hideLoading(context);
+                    context.pop();
+                  });
+            },
+          ),
         ),
       ).then(
         (value) {
           if (value == null) {
-            rw();
+            rw2();
           }
         },
       );
@@ -916,7 +898,7 @@ class _InternalConferenceViewState
                 onTap: () async {
                   context.push('/invite').then(
                     (value) {
-                      rw();
+                      rw2();
                     },
                   );
                 },

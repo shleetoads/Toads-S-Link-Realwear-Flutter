@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lepsi_rw_speech_recognizer/lepsi_rw_speech_recognizer.dart';
 import 'package:realwear_flutter/dataSource/socketManager.dart';
 import 'package:realwear_flutter/utils/appConfig.dart';
 import 'package:realwear_flutter/utils/myToasts.dart';
+import 'package:realwear_flutter/utils/recog.dart';
 import 'package:realwear_flutter/viewModels/authViewModel.dart';
 import 'package:realwear_flutter/viewModels/changeNetworkCreateRoomViewModel.dart';
 import 'package:realwear_flutter/viewModels/conferenceListViewModel.dart';
@@ -31,36 +31,34 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
   @override
   void initState() {
     localKr = ref.read(localeViewModelProvider) == 'KOR';
-    rw();
     super.initState();
+    rw2();
   }
 
-  rw() {
-    LepsiRwSpeechRecognizer.setCommands(<String>[
-      'Internal Network',
-      '내부 네트워크',
-      'External Network',
-      '외부 네트워크',
-      'Cancel',
-      '취소'
-    ], (command) async {
-      logger.i(command);
+  rw2() {
+    Recog.setHandler(
+      (command) {
+        logger.i(command);
 
-      switch (command) {
-        case 'Cancel':
-        case '취소':
-          context.pop();
-          break;
-        case 'External Network':
-        case '외부 네트워크':
-          goExternal();
-          break;
-        case 'Internal Network':
-        case '내부 네트워크':
-          goInternal();
-          break;
-      }
-    });
+        switch (command) {
+          case 'Cancel':
+          case '취소':
+          case '뒤로가기':
+          case 'Go Back':
+          case '닫기':
+          case 'Close':
+            context.pop();
+          case 'External Network':
+          case '외부 네트워크':
+            goExternal();
+            break;
+          case 'Internal Network':
+          case '내부 네트워크':
+            goInternal();
+            break;
+        }
+      },
+    );
   }
 
   goInternal() async {
@@ -72,7 +70,7 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
               extra: widget.leaveFunc)
           .then(
         (value) {
-          rw();
+          rw2();
         },
       );
       // showDialog(
@@ -83,10 +81,6 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
       //   ),
       // );
     } else {
-      if (widget.isInRoom) {
-        await widget.leaveFunc!();
-      }
-
       try {
         SocketManager().disconnect(isNetworkChange: true);
 
@@ -109,9 +103,6 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
   }
 
   goExternal() async {
-    if (widget.isInRoom) {
-      await widget.leaveFunc!();
-    }
     try {
       bool prevNetwork = AppConfig.isExternal;
 
@@ -134,175 +125,179 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFF181820),
-      body: Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 0),
-          child: Container(
-            width: 600,
-            padding: const EdgeInsets.all(0),
-            decoration: BoxDecoration(
-              color: const Color(0xFF272B37),
-              shape: BoxShape.rectangle,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFCDCDCD), width: 1),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                const SizedBox(
-                  height: 20,
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Text(
-                    'Select Network',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 30,
-                      fontWeight: FontWeight.w600,
+    return Semantics(
+      label:
+          'hf_add_commands:외부 네트워크|External Network|내부 네트워크|Internal Network|닫기|Close|취소|Cancel|뒤로가기|Go Back|',
+      child: Scaffold(
+        backgroundColor: Color(0xFF181820),
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 0),
+            child: Container(
+              width: 600,
+              padding: const EdgeInsets.all(0),
+              decoration: BoxDecoration(
+                color: const Color(0xFF272B37),
+                shape: BoxShape.rectangle,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFCDCDCD), width: 1),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      'Select Network',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 30,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Text(
-                    'Please choose how you would like to connect',
-                    style: TextStyle(
-                      color: Color(0xFFB7BDC3),
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      'Please choose how you would like to connect',
+                      style: TextStyle(
+                        color: Color(0xFFB7BDC3),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(
-                  height: 20,
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 60,
-                          child: Semantics(
-                            value: 'hf_no_number',
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                elevation: 0.0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8.0),
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 60,
+                            child: Semantics(
+                              value: 'hf_no_number',
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  elevation: 0.0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8.0),
+                                  ),
+                                  backgroundColor: const Color(0xFF2A82FF),
+                                  padding: EdgeInsets.zero,
                                 ),
-                                backgroundColor: const Color(0xFF2A82FF),
-                                padding: EdgeInsets.zero,
-                              ),
-                              onPressed: goInternal,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Image.asset(
-                                    'assets/icons/ic_internal.png',
-                                    width: 26,
-                                    height: 24,
-                                  ),
-                                  SizedBox(
-                                    width: 15,
-                                  ),
-                                  Text(
-                                    localKr ? '내부 네트워크' : 'Internal Network',
-                                    style: TextStyle(
-                                        letterSpacing: -0.5,
-                                        color: Colors.white,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w500),
-                                  ),
-                                ],
+                                onPressed: goInternal,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Image.asset(
+                                      'assets/icons/ic_internal.png',
+                                      width: 26,
+                                      height: 24,
+                                    ),
+                                    SizedBox(
+                                      width: 15,
+                                    ),
+                                    Text(
+                                      localKr ? '내부 네트워크' : 'Internal Network',
+                                      style: TextStyle(
+                                          letterSpacing: -0.5,
+                                          color: Colors.white,
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w500),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(
-                        width: 15,
-                      ),
-                      Expanded(
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 60,
-                          child: Semantics(
-                            value: 'hf_no_number',
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                elevation: 0.0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8.0),
+                        const SizedBox(
+                          width: 15,
+                        ),
+                        Expanded(
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 60,
+                            child: Semantics(
+                              value: 'hf_no_number',
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  elevation: 0.0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8.0),
+                                  ),
+                                  backgroundColor: const Color(0xFF2A82FF),
+                                  padding: EdgeInsets.zero,
                                 ),
-                                backgroundColor: const Color(0xFF2A82FF),
-                                padding: EdgeInsets.zero,
-                              ),
-                              onPressed: goExternal,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Image.asset(
-                                    'assets/icons/ic_external.png',
-                                    width: 26,
-                                    height: 24,
-                                  ),
-                                  SizedBox(
-                                    width: 15,
-                                  ),
-                                  Text(
-                                    localKr ? '외부 네트워크' : 'External Network',
-                                    style: TextStyle(
-                                        letterSpacing: -0.5,
-                                        color: Colors.white,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w500),
-                                  ),
-                                ],
+                                onPressed: goExternal,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Image.asset(
+                                      'assets/icons/ic_external.png',
+                                      width: 26,
+                                      height: 24,
+                                    ),
+                                    SizedBox(
+                                      width: 15,
+                                    ),
+                                    Text(
+                                      localKr ? '외부 네트워크' : 'External Network',
+                                      style: TextStyle(
+                                          letterSpacing: -0.5,
+                                          color: Colors.white,
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w500),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(
-                  height: 20,
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      SizedBox(
-                        width: 120,
-                        height: 50,
-                        child: Semantics(
-                          value: 'hf_no_number',
-                          child: PrimaryButton(
-                            isWhite: true,
-                            title: localKr ? '취소' : 'Cancel',
-                            onTap: () {
-                              context.pop();
-                            },
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        SizedBox(
+                          width: 120,
+                          height: 50,
+                          child: Semantics(
+                            value: 'hf_no_number',
+                            child: PrimaryButton(
+                              isWhite: true,
+                              title: localKr ? '취소' : 'Cancel',
+                              onTap: () {
+                                context.pop();
+                              },
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(
-                  height: 20,
-                ),
-              ],
+                  const SizedBox(
+                    height: 20,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -315,6 +310,9 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
     String? email = await asyncShare.getString('email');
     if (email == null) {
       print('자동로그인 x');
+      if (widget.isInRoom) {
+        await widget.leaveFunc!();
+      }
       context.go('/auth/signin');
     } else {
       //자동로그인
@@ -327,7 +325,7 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
               MyToasts().showNormal('This email is already signed in.');
               context.go('/auth/signin');
             },
-            successFunc: (int accountNo, int companyNo, String email) {
+            successFunc: (int accountNo, int companyNo, String email) async {
               //리프래시 룸 리스트 미리 달아주기
               ref
                   .read(conferenceListViewModelProvider.notifier)
@@ -341,17 +339,27 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
                   .read(inviteMemberViewModelProvider.notifier)
                   .getMemberList(companyNo: companyNo, email: email);
 
-              if (!AppConfig.isExternal) {
-                context.pop();
-              }
-
               if (widget.isInRoom) {
                 ref
                     .read(changeNetworkCreateRoomViewModelProvider.notifier)
                     .setValue(true);
+
+                await widget.leaveFunc!();
+              }
+
+              if (!AppConfig.isExternal) {
+                context.pop();
               }
 
               context.go('/internal/conference');
+            },
+            failFunc: () {
+              ref.read(authViewModelProvider.notifier).logout();
+
+              final asyncShared = SharedPreferencesAsync();
+              asyncShared.remove('email');
+
+              context.go('/signin');
             },
           );
     }
@@ -362,6 +370,9 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
     String? email = await asyncShare.getString('email');
     if (email == null) {
       print('자동로그인 x');
+      if (widget.isInRoom) {
+        await widget.leaveFunc!();
+      }
       context.go('/auth/signin');
     } else {
       //자동로그인
@@ -374,8 +385,9 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
               MyToasts().showNormal('This email is already signed in.');
               context.go('/auth/signin');
             },
-            successFunc: (int accountNo, int companyNo, String email) {
+            successFunc: (int accountNo, int companyNo, String email) async {
               //리프래시 룸 리스트 미리 달아주기
+
               ref
                   .read(conferenceListViewModelProvider.notifier)
                   .onRepleshConferenceList(accountNo: accountNo);
@@ -388,17 +400,27 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
                   .read(inviteMemberViewModelProvider.notifier)
                   .getMemberList(companyNo: companyNo, email: email);
 
-              if (AppConfig.isExternal == prevNetwork) {
-                context.pop();
-              }
-
               if (widget.isInRoom) {
                 ref
                     .read(changeNetworkCreateRoomViewModelProvider.notifier)
                     .setValue(true);
+
+                await widget.leaveFunc!();
+              }
+
+              if (AppConfig.isExternal == prevNetwork) {
+                context.pop();
               }
 
               context.go('/conference');
+            },
+            failFunc: () {
+              ref.read(authViewModelProvider.notifier).logout();
+
+              final asyncShared = SharedPreferencesAsync();
+              asyncShared.remove('email');
+
+              context.go('/signin');
             },
           );
     }
