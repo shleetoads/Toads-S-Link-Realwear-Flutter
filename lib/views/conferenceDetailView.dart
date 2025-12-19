@@ -787,6 +787,8 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
                                               view: null,
                                               mirrorMode: VideoMirrorModeType
                                                   .videoMirrorModeDisabled,
+                                              renderMode:
+                                                  RenderModeType.renderModeFit,
                                             ),
                                             connection: RtcConnection(
                                                 channelId: widget.meetId),
