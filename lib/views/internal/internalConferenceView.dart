@@ -470,7 +470,6 @@ class _InternalConferenceViewState
                     _rightPageWidget(modelList.length),
                   ],
                   Spacer(),
-                  //네트워크 변경
                   SizedBox(
                     width: 200,
                     height: 45,

@@ -735,7 +735,6 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
                     ),
                     Spacer(),
                     if (!_showChat) ...[
-                      //네트워크 변경
                       Semantics(
                         value: 'hf_no_number',
                         child: GestureDetector(

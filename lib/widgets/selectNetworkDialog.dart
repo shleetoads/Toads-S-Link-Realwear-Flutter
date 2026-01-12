@@ -309,11 +309,13 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
     final SharedPreferencesAsync asyncShare = SharedPreferencesAsync();
     String? email = await asyncShare.getString('email');
     if (email == null) {
+      if (!mounted) return;
+
       print('자동로그인 x');
       if (widget.isInRoom) {
         await widget.leaveFunc!();
       }
-      context.go('/auth/signin');
+      context.go('/signin');
     } else {
       //자동로그인
       print('자동로그인 o');
@@ -322,10 +324,14 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
       ref.read(authViewModelProvider.notifier).autoLogin(
             email: email,
             duplicateFunc: () {
+              if (!mounted) return;
+
               MyToasts().showNormal('This email is already signed in.');
-              context.go('/auth/signin');
+              context.go('/signin');
             },
             successFunc: (int accountNo, int companyNo, String email) async {
+              if (!mounted) return;
+
               //리프래시 룸 리스트 미리 달아주기
               ref
                   .read(conferenceListViewModelProvider.notifier)
@@ -354,6 +360,8 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
               context.go('/internal/conference');
             },
             failFunc: () {
+              if (!mounted) return;
+
               ref.read(authViewModelProvider.notifier).logout();
 
               final asyncShared = SharedPreferencesAsync();
@@ -369,11 +377,13 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
     final SharedPreferencesAsync asyncShare = SharedPreferencesAsync();
     String? email = await asyncShare.getString('email');
     if (email == null) {
+      if (!mounted) return;
+
       print('자동로그인 x');
       if (widget.isInRoom) {
         await widget.leaveFunc!();
       }
-      context.go('/auth/signin');
+      context.go('/signin');
     } else {
       //자동로그인
       print('자동로그인 o');
@@ -383,10 +393,11 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
             email: email,
             duplicateFunc: () {
               MyToasts().showNormal('This email is already signed in.');
-              context.go('/auth/signin');
+              context.go('/signin');
             },
             successFunc: (int accountNo, int companyNo, String email) async {
               //리프래시 룸 리스트 미리 달아주기
+              if (!mounted) return;
 
               ref
                   .read(conferenceListViewModelProvider.notifier)
@@ -412,9 +423,11 @@ class _SelectNetworkViewState extends ConsumerState<SelectNetworkDialog> {
                 context.pop();
               }
 
+              if (!mounted) return;
               context.go('/conference');
             },
             failFunc: () {
+              if (!mounted) return;
               ref.read(authViewModelProvider.notifier).logout();
 
               final asyncShared = SharedPreferencesAsync();

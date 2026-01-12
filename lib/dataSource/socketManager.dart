@@ -84,7 +84,7 @@ class SocketManager {
 
                     MyToasts().showNormal('This email is already signed in.');
 
-                    router.go('/auth/signin');
+                    router.go('/signin');
 
                     //로그인화면으로 팅궈 + 로그아웃루트로 이미 로그인된 아이디입니다
                   }

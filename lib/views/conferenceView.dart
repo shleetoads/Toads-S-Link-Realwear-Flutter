@@ -215,6 +215,7 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
             switchLocale();
             break;
 
+          //네트워크 변경
           case 'Change Network':
           case '네트워크 전환':
             context.push('/dialog/network?isInRoom=false').then(

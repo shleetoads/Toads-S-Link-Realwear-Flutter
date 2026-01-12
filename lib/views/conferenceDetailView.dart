@@ -35,6 +35,7 @@ import 'package:realwear_flutter/viewModels/localeViewModel.dart';
 import 'package:realwear_flutter/viewModels/screenShareViewModel.dart';
 import 'package:realwear_flutter/widgets/normalAlertDialog.dart';
 import 'package:screenshot/screenshot.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'package:path/path.dart' as p;
 
@@ -290,16 +291,17 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
           case '마이크 켜기':
           case 'Mike On':
             if (_myAudio) break;
-            await _engine.muteLocalAudioStream(_myAudio);
+            await _engine.muteLocalAudioStream(false);
 
             setState(() {
               _myAudio = !_myAudio;
             });
+
             break;
           case '마이크 끄기':
           case 'Mike Off':
             if (!_myAudio) break;
-            await _engine.muteLocalAudioStream(_myAudio);
+            await _engine.muteLocalAudioStream(true);
 
             setState(() {
               _myAudio = !_myAudio;
@@ -366,7 +368,55 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
             });
             await _engine.setCameraZoomFactor(_scale);
             break;
-
+          case '개발 하나 영':
+            await _engine.setAINSMode(
+                enabled: _myANC, mode: AudioAinsMode.ainsModeBalanced);
+            final asyncShared = SharedPreferencesAsync();
+            asyncShared.setInt('dev_ains', 0);
+            break;
+          case '개발 하나 일':
+            await _engine.setAINSMode(
+                enabled: _myANC, mode: AudioAinsMode.ainsModeAggressive);
+            final asyncShared = SharedPreferencesAsync();
+            asyncShared.setInt('dev_ains', 1);
+            break;
+          case '개발 하나 이':
+            await _engine.setAINSMode(
+                enabled: _myANC, mode: AudioAinsMode.ainsModeUltralowlatency);
+            final asyncShared = SharedPreferencesAsync();
+            asyncShared.setInt('dev_ains', 2);
+            break;
+          case '개발 둘 켜기':
+            await _engine.setParameters('{"che.audio.aec.enable":true}');
+            final asyncShard = SharedPreferencesAsync();
+            asyncShard.setBool('dev_aec', true);
+            break;
+          case '개발 둘 끄기':
+            await _engine.setParameters('{"che.audio.aec.enable":false}');
+            final asyncShard = SharedPreferencesAsync();
+            asyncShard.setBool('dev_aec', false);
+            break;
+          case '개발 삼 켜기':
+            await _engine.setParameters('{"che.audio.agc.enable":true}');
+            final asyncShard = SharedPreferencesAsync();
+            asyncShard.setBool('dev_agc', true);
+            break;
+          case '개발 삼 끄기':
+            await _engine.setParameters('{"che.audio.agc.enable":false}');
+            final asyncShard = SharedPreferencesAsync();
+            asyncShard.setBool('dev_agc', false);
+            break;
+          case '개발 넷 켜기':
+            await _engine.setParameters('{"che.audio.anc.enable":true}');
+            final asyncShard = SharedPreferencesAsync();
+            asyncShard.setBool('dev_anc', true);
+            break;
+          case '개발 넷 끄기':
+            await _engine.setParameters('{"che.audio.anc.enable":false}');
+            final asyncShard = SharedPreferencesAsync();
+            asyncShard.setBool('dev_anc', false);
+            break;
+          //네트워크 변경
           case '네트워크 전환':
           case 'Change Network':
             context.push(
@@ -687,8 +737,41 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
       reportVad: true, // VAD 활성화
     );
 
-    await _engine.setAINSMode(
-        enabled: _myANC, mode: AudioAinsMode.ainsModeBalanced);
+    final asyncShared = SharedPreferencesAsync();
+    int devAins = await asyncShared.getInt('dev_ains') ?? 1;
+
+    switch (devAins) {
+      case 0:
+        await _engine.setAINSMode(
+            enabled: _myANC, mode: AudioAinsMode.ainsModeBalanced);
+      case 1:
+        await _engine.setAINSMode(
+            enabled: _myANC, mode: AudioAinsMode.ainsModeAggressive);
+      case 2:
+        await _engine.setAINSMode(
+            enabled: _myANC, mode: AudioAinsMode.ainsModeUltralowlatency);
+    }
+
+    bool devAec = await asyncShared.getBool('dev_aec') ?? true;
+    bool devAgc = await asyncShared.getBool('dev_agc') ?? true;
+    bool devAnc = await asyncShared.getBool('dev_anc') ?? true;
+
+    // setState(() {});
+
+    if (!devAec) {
+      await _engine.setParameters('{"che.audio.aec.enable":false}');
+    }
+
+    if (!devAgc) {
+      await _engine.setParameters('{"che.audio.agc.enable":false}');
+    }
+
+    if (!devAnc) {
+      await _engine.setParameters('{"che.audio.anc.enable":false}');
+    }
+
+    await _engine.setParameters('{"che.audio.prioritize_audio":true}');
+    await _engine.setParameters('{"che.audio.low_latency":true}');
 
     _mediaEngine = _engine.getMediaEngine();
 
@@ -731,7 +814,7 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
 
     return Semantics(
       label:
-          "hf_add_commands:방 나가기|Leave Room|초대하기|Invite|플래시 켜기|Flash On|플래시 끄기|Flash Off|화면녹화 켜기|Screen Recording On|화면녹화 끄기|Screen Recording Off|메뉴 열기|Show Menu|메뉴 닫기|Hide Menu|화면공유 켜기|Screen Share On|화면공유 끄기|Screen Share Off|마이크 켜키|Mike On|마이크 끄기|Mike Off|사진 저장|Capture|채팅 켜기|Chat On|채팅 끄기|Chat Off|배율 1|배율 2|배율 3|배율 4|배율 5|Zoom One|Zoom Two|Zoom Three|Zoom Four|Zoom Five|뒤로가기|Go Back|네트워크 전환|Change Network|증폭 켜기|Noise Boost On|증폭 끄기|Noise Boost Off|",
+          "hf_add_commands:방 나가기|Leave Room|초대하기|Invite|플래시 켜기|Flash On|플래시 끄기|Flash Off|화면녹화 켜기|Screen Recording On|화면녹화 끄기|Screen Recording Off|메뉴 열기|Show Menu|메뉴 닫기|Hide Menu|화면공유 켜기|Screen Share On|화면공유 끄기|Screen Share Off|마이크 켜기|Mike On|마이크 끄기|Mike Off|사진 저장|Capture|채팅 켜기|Chat On|채팅 끄기|Chat Off|배율 1|배율 2|배율 3|배율 4|배율 5|Zoom One|Zoom Two|Zoom Three|Zoom Four|Zoom Five|뒤로가기|Go Back|네트워크 전환|Change Network|증폭 켜기|Noise Boost On|증폭 끄기|Noise Boost Off|개발 하나 영|개발 하나 일|개발 하나 이|개발 둘 켜기|개발 둘 끄기|개발 삼 켜기|개발 삼 끄기|개발 넷 켜기|개발 넷 끄기|",
       child: Scaffold(
         backgroundColor: Colors.black,
         body: SizedBox(

@@ -437,7 +437,7 @@ class _InternalIpDialogState extends ConsumerState<InternalIpDialog> {
     String? email = await asyncShare.getString('email');
     if (email == null) {
       print('자동로그인 x');
-      context.go('/auth/signin');
+      context.go('/signin');
     } else {
       //자동로그인
       print('자동로그인 o');
@@ -447,7 +447,7 @@ class _InternalIpDialogState extends ConsumerState<InternalIpDialog> {
             email: email,
             duplicateFunc: () {
               MyToasts().showNormal('This email is already signed in.');
-              context.go('/auth/signin');
+              context.go('/signin');
             },
             successFunc: (int accountNo, int companyNo, String email) async {
               //리프래시 룸 리스트 미리 달아주기
