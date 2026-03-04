@@ -49,8 +49,6 @@ class DrawViewModel extends StateNotifier<ServerDrawModel?> {
       'draw',
       (data) {
         if (data[2] != SocketManager().getSocket().id) {
-          logger.i(data);
-
           state = ServerDrawModel(
             meetId: null,
             posX: data[0] is int ? data[0].toDouble() : data[0],
@@ -70,8 +68,6 @@ class DrawViewModel extends StateNotifier<ServerDrawModel?> {
     SocketManager().getSocket().on(
       'drawEnd',
       (data) {
-        logger.e(data);
-
         if (data[0] != SocketManager().getSocket().id) {
           state = ServerDrawModel(
             meetId: null,

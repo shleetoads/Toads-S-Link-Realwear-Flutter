@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -105,8 +108,6 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
       // List<String> rgbValues = next.color!.split(',');
       Map<String, dynamic> colorData = jsonDecode(next.color!);
       // logger.i(next.color!);
-      logger.i(offset.dx);
-      logger.i(offset.dy);
 
       setState(() {
         drawModelList.add(DrawModel(
@@ -978,6 +979,106 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
     }
   }
 
+  /// 서버에서 받은 files 목록의 url을 Dio로 다운로드하여 로컬 경로 목록 반환
+  Future<List<String>> _downloadWavFiles(
+      List<dynamic> files, Directory directory) async {
+    final dio = Dio();
+    final List<String> paths = [];
+    for (int i = 0; i < files.length; i++) {
+      final item = files[i];
+      if (item is! Map) continue;
+      final url = item['url']?.toString();
+      final socketId = item['socketId']?.toString() ?? '$i';
+      if (url == null || url.isEmpty) continue;
+      final safeId = socketId.replaceAll(RegExp(r'[^\w\-]'), '_');
+      final savePath = '${directory.path}/remote_$safeId.wav';
+      try {
+        await dio.download(url, savePath);
+        paths.add(savePath);
+      } catch (e) {
+        logger.e('wav 다운로드 실패 $url: $e');
+      }
+    }
+    return paths;
+  }
+
+  /// wav 여러 개를 ffmpeg amix로 하나로 합침
+  Future<String?> _mergeWavFiles(
+      List<String> wavPaths, Directory directory) async {
+    if (wavPaths.isEmpty) return null;
+    if (wavPaths.length == 1) return wavPaths.first;
+
+    final outputPath =
+        '${directory.path}/merged_remote_${DateTime.now().millisecondsSinceEpoch}.wav';
+    // amix: inputs=N:duration=longest, -threads 0으로 멀티코어 활용
+    final inputs =
+        wavPaths.asMap().entries.map((e) => '-i "${e.value}"').join(' ');
+    final filterInputs =
+        wavPaths.asMap().entries.map((e) => '[${e.key}:a]').join('');
+    final filter =
+        '${filterInputs}amix=inputs=${wavPaths.length}:duration=longest[a]';
+    const String threadOpt = '-threads 0';
+    final command =
+        '$inputs -filter_complex "$filter" -map "[a]" $threadOpt -y "$outputPath"';
+
+    final session = await FFmpegKit.execute(command);
+    final returnCode = await session.getReturnCode();
+    if (ReturnCode.isSuccess(returnCode)) {
+      return outputPath;
+    }
+    final log = await session.getAllLogsAsString();
+    logger.e('wav 병합 실패: $log');
+    return null;
+  }
+
+  /// 비디오(로컬 녹화) + 오디오(wav) ffmpeg 병합
+  /// 화면 녹화 mp4에 오디오가 없을 수 있음 → 오디오 없으면 wav만 붙이는 폴백 사용
+  /// 속도 최적화: 비디오에 오디오 없는 경우가 많아 해당 명령을 먼저 시도해 FFmpeg 1회만 실행
+  Future<String?> _mergeAudioAndVideo(
+      String videoPath, String audioPath, Directory directory) async {
+    final String outputFilePath =
+        '${directory.path}/Toads_S-Link_${DateTime.now().millisecondsSinceEpoch}.mp4';
+
+    // 병합 시 인코딩 속도 향상: 멀티스레드 + AAC 빠른 인코더
+    const String aacOpts = '-c:a aac -b:a 128k -threads 0';
+
+    // 1) 비디오에 오디오 스트림이 없을 때(화면 녹화 대부분): 비디오 + wav만 매핑 → 먼저 시도해 긴 녹화 시 불필요한 1회 실패 방지
+    final commandVideoOnly = '-i "$videoPath" '
+        '-i "$audioPath" '
+        '-map 0:v:0 '
+        '-map 1:a:0 '
+        '-c:v copy '
+        '$aacOpts '
+        '-shortest '
+        '-y "$outputFilePath"';
+
+    var session = await FFmpegKit.execute(commandVideoOnly);
+    var returnCode = await session.getReturnCode();
+    if (ReturnCode.isSuccess(returnCode)) {
+      return outputFilePath;
+    }
+
+    // 2) 비디오에 오디오가 있는 경우: [0:a][1:a] amix
+    final commandWithMix = '-i "$videoPath" '
+        '-i "$audioPath" '
+        '-filter_complex "[0:a][1:a]amix=inputs=2:duration=first[a]" '
+        '-map 0:v:0 '
+        '-map "[a]" '
+        '-c:v copy '
+        '$aacOpts '
+        '-y "$outputFilePath"';
+
+    session = await FFmpegKit.execute(commandWithMix);
+    returnCode = await session.getReturnCode();
+    if (ReturnCode.isSuccess(returnCode)) {
+      return outputFilePath;
+    }
+
+    final log = await session.getAllLogsAsString();
+    logger.e('비디오/오디오 병합 실패: $log');
+    return null;
+  }
+
   _record() async {
     if (!_recordLoading) {
       setState(() {
@@ -986,8 +1087,7 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
       if (!_recording) {
         const uuid = Uuid();
 
-        _recording =
-            await FlutterScreenRecording.startRecordScreenAndAudio(uuid.v4());
+        _recording = await FlutterScreenRecording.startRecordScreen(uuid.v4());
 
         logger.i(_recording);
 
@@ -996,6 +1096,11 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
             setState(() {
               _recordTime++;
             });
+          });
+
+          SocketManager().getSocket().emitWithAck(
+              'recordStart', {'meet_id': widget.meetId}, ack: (data) {
+            logger.w('start ack $data');
           });
         }
 
@@ -1006,10 +1111,18 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
 
         logger.i(path);
 
-        //storage/emulated/0/Android/data/com.toads.toadsslink.flutter/cache/739e716b-c4a4-42b8-93af-d2c946444975.mp4
+        SocketManager().getSocket().emitWithAck(
+            'recordStop', {'meet_id': widget.meetId}, ack: (data) async {
+          logger.w('stop ack $data');
 
-        //IOS는 document폴더에 알아서 저장 android도 저장되는거 같은데 그거 삭제하고 외부에 저장
-        if (Platform.isAndroid) {
+          setState(() {
+            _recordTimer?.cancel();
+            _recordTimer = null;
+            _recordTime = 0;
+
+            _recording = false;
+          });
+
           Directory directory = Directory(dotenv.env['AOS_DCIM_PATH']!);
 
           if (!directory.existsSync()) {
@@ -1019,30 +1132,54 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
           File tempFile = File(path);
           File resultFile = File('${directory.path}/${p.basename(path)}');
 
-          //카피해주고 기존꺼 지우고
+          tempFile.copySync(resultFile.path);
+          tempFile.deleteSync();
 
-          resultFile.writeAsBytesSync(tempFile.readAsBytesSync());
-          Directory(tempFile.path).deleteSync(recursive: true);
+          String finalPath = resultFile.path;
 
-          if (Platform.isAndroid) {
+          try {
+            try {
+              final files = data is Map ? data['files'] : null;
+              final fileList = files is List ? files : null;
+              if (fileList != null && fileList.isNotEmpty) {
+                final tempDir = await getTemporaryDirectory();
+                final wavPaths = await _downloadWavFiles(fileList, tempDir);
+                if (wavPaths.isNotEmpty) {
+                  final mergedWav = await _mergeWavFiles(wavPaths, tempDir);
+                  if (mergedWav != null) {
+                    final mergeFile = await _mergeAudioAndVideo(
+                        resultFile.path, mergedWav, tempDir);
+                    if (mergeFile != null) {
+                      // 최종 mp4만 DCIM으로 복사 (앱 저장소 → 갤러리)
+                      final destFile = File(
+                          '${directory.path}/Toads_S-Link_${DateTime.now().millisecondsSinceEpoch}.mp4');
+                      try {
+                        File(mergeFile).copySync(destFile.path);
+                        finalPath = destFile.path;
+                      } catch (_) {
+                        finalPath = mergeFile;
+                      }
+                      logger.i('비디오+원격 오디오 병합 완료: $finalPath');
+                    }
+                  }
+                }
+              }
+            } catch (e, st) {
+              logger.e('wav 다운로드/병합 중 오류: $e $st');
+            }
+
             const MethodChannel channel = MethodChannel('ToadsSLink');
-            await channel
-                .invokeMethod('refreshMedia', {"path": resultFile.path});
+            await channel.invokeMethod('refreshMedia', {"path": finalPath});
+
+            logger.i(finalPath);
+            MyToasts().showNormal("Saved in '$finalPath'");
+          } catch (e) {
+            logger.e('녹화 파일 처리 중 오류: $e');
+          } finally {
+            setState(() {
+              _recordLoading = false;
+            });
           }
-
-          logger.i(resultFile.path);
-
-          MyToasts().showNormal("Saved in '${resultFile.path}'");
-        } else {
-          MyToasts().showNormal("Saved in '$path'");
-        }
-
-        setState(() {
-          _recordTimer?.cancel();
-          _recordTimer = null;
-          _recordTime = 0;
-
-          _recording = false;
         });
       }
 
@@ -1468,16 +1605,6 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
     SocketManager().getSocket().off('getSenderCandidate');
     SocketManager().getSocket().off('getReceiverAnswer');
     SocketManager().getSocket().off('getReceiverCandidate');
-
-    await _localStream?.dispose();
-    await _peer?.close();
-    await _peer?.dispose();
-    await localRenderer?.dispose();
-    for (var element in remoteUsers.entries) {
-      await element.value.peer?.close();
-      await element.value.peer?.dispose();
-      await element.value.remoteRenderer?.dispose();
-    }
   }
 
   _leaveFunc() async {
@@ -1492,7 +1619,29 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
     ref.read(conferenceViewModelProvider.notifier).init();
     ref.read(chatViewModelProvider.notifier).init();
 
-    await _dispose();
+    // 소켓 이벤트 리스너 제거 (네트워크 전환 시 중복 등록 방지)
+    SocketManager().getSocket().off('allUsers');
+    SocketManager().getSocket().off('user_exit');
+    SocketManager().getSocket().off('getSenderAnswer');
+    SocketManager().getSocket().off('getSenderCandidate');
+    SocketManager().getSocket().off('getReceiverAnswer');
+    SocketManager().getSocket().off('getReceiverCandidate');
+
+    try {
+      await _localStream?.dispose();
+      await _peer?.close();
+      await _peer?.dispose();
+      _peer = null; // null로 설정하여 이후 호출 방지
+      await localRenderer?.dispose();
+      for (var element in remoteUsers.entries) {
+        await element.value.peer?.close();
+        await element.value.peer?.dispose();
+        await element.value.remoteRenderer?.dispose();
+      }
+      remoteUsers.clear();
+    } catch (e) {
+      logger.e(e);
+    }
 
     context.pop();
   }

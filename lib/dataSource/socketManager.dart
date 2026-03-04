@@ -27,10 +27,32 @@ class SocketManager {
 
   bool isLogin = false;
   bool isNetworkChange = false;
+  bool _isConnecting = false; // 연결 중 플래그
 
   SocketManager._internal();
 
   Future<void> connect(String url) async {
+    if (_isConnecting) {
+      print('Socket connection already in progress, waiting...');
+      return;
+    }
+
+    _isConnecting = true;
+
+    try {
+      if (socket.connected) {
+        // onDisconnect 이벤트가 중복 호출되지 않도록 플래그 설정
+        isNetworkChange = true;
+        socket.disconnect();
+        // 잠시 대기하여 disconnect 이벤트 처리 시간 확보
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      // 기존 소켓 리소스 정리
+      socket.dispose();
+    } catch (e) {
+      print('Error disposing existing socket: $e');
+    }
+
     Completer completer = Completer<void>();
 
     socket = IO.io(
@@ -109,6 +131,8 @@ class SocketManager {
 
     socket.onConnectError(
       (error) async {
+        _isConnecting = false; // 연결 실패
+
         if (!completer.isCompleted) {
           completer.completeError(Exception('Connection error: $error'));
 
@@ -127,7 +151,12 @@ class SocketManager {
 
     socket.onDisconnect((_) {
       print('Socket disconnected');
+      _isConnecting = false; // 연결 해제됨
 
+      if (isNetworkChange) {
+        isNetworkChange = false; // 플래그 리셋
+        return;
+      }
       if (isNetworkChange) {
         isNetworkChange = !isNetworkChange;
         return;
@@ -180,6 +209,12 @@ class SocketManager {
 
   disconnect({required bool isNetworkChange}) {
     this.isNetworkChange = isNetworkChange;
-    socket.disconnect();
+    try {
+      if (socket.connected) {
+        socket.disconnect();
+      }
+    } catch (e) {
+      print('Error disconnecting socket: $e');
+    }
   }
 }
