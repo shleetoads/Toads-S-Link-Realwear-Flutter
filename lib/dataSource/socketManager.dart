@@ -16,6 +16,7 @@ import 'package:realwear_flutter/viewModels/screenShareViewModel.dart';
 import 'package:restart_app/restart_app.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:realwear_flutter/utils/networkUsageTracker.dart';
 
 class SocketManager {
   static final SocketManager _instance = SocketManager._internal();
@@ -191,6 +192,10 @@ class SocketManager {
       // socket.dispose();
     });
 
+    socket.onAny((event, [data]) {
+      NetworkUsageTracker.addSocketRx(data);
+    });
+
     socket.on(
       'message',
       (data) {
@@ -205,6 +210,20 @@ class SocketManager {
 
   IO.Socket getSocket() {
     return socket;
+  }
+
+  void emitTracked(String event, [dynamic data]) {
+    NetworkUsageTracker.addSocketTx(data);
+    socket.emit(event, data);
+  }
+
+  void emitWithAckTracked(
+    String event,
+    dynamic data, {
+    Function? ack,
+  }) {
+    NetworkUsageTracker.addSocketTx(data);
+    socket.emitWithAck(event, data, ack: ack);
   }
 
   disconnect({required bool isNetworkChange}) {

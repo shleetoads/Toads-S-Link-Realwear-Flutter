@@ -39,7 +39,7 @@ void main() async {
   Recog();
 
   //네트워크 변경 아직 업데이트 안함 밑은 지워야함
-  // SocketManager().connect(dotenv.env['BASE_URL']!);
+  SocketManager().connect(dotenv.env['BASE_URL']!);
 
   await AppConfig.requestAllPermissions();
 
@@ -131,8 +131,8 @@ final GoRouter goRouter = GoRouter(
     ),
   ],
   //네트워크 변경
-  initialLocation: '/network',
-  // initialLocation: '/',
+  // initialLocation: '/network',
+  initialLocation: '/',
 );
 
 class MyApp extends ConsumerWidget {

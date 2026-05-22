@@ -33,7 +33,7 @@ if (keystorePropertiesFile.exists()) {
 android {
 
     namespace = "com.toads.toads_s_link.realwear.realwear_flutter"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = "26.1.10909125"
 
     compileOptions {

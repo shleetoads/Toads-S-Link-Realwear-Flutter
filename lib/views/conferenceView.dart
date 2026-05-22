@@ -216,15 +216,15 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
             break;
 
           //네트워크 변경
-          case 'Change Network':
-          case '네트워크 전환':
-            context.push('/dialog/network?isInRoom=false').then(
-              (value) {
-                rw2();
-              },
-            );
+          //   case 'Change Network':
+          //   case '네트워크 전환':
+          //     context.push('/dialog/network?isInRoom=false').then(
+          //       (value) {
+          //         rw2();
+          //       },
+          //     );
 
-            break;
+          //     break;
         }
       },
     );
@@ -269,20 +269,20 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
                     width: 10,
                   ),
                   //네트워크 변경
-                  Text(
-                    'External Conference',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600),
-                  ),
                   // Text(
-                  //   'Conference List',
+                  //   'External Conference',
                   //   style: TextStyle(
                   //       color: Colors.white,
-                  //       fontSize: 22,
+                  //       fontSize: 18,
                   //       fontWeight: FontWeight.w600),
                   // ),
+                  Text(
+                    'Conference List',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600),
+                  ),
                   Spacer(),
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -493,53 +493,53 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
                   ],
                   Spacer(),
                   //네트워크 변경
-                  SizedBox(
-                    width: 200,
-                    height: 45,
-                    child: Semantics(
-                      value: 'hf_no_number',
-                      child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            elevation: 0.0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8.0),
-                            ),
-                            backgroundColor: Colors.grey,
-                            padding: EdgeInsets.zero,
-                          ),
-                          onPressed: () {
-                            context.push('/dialog/network?isInRoom=false').then(
-                              (value) {
-                                rw2();
-                              },
-                            );
-                          },
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Image.asset(
-                                'assets/icons/ic_network.png',
-                                width: 20,
-                                height: 20,
-                              ),
-                              SizedBox(
-                                width: 10,
-                              ),
-                              Text(
-                                localKr ? '네트워크 전환' : 'Change Network',
-                                style: TextStyle(
-                                    letterSpacing: -0.5,
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600),
-                              ),
-                            ],
-                          )),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 20,
-                  ),
+                  // SizedBox(
+                  //   width: 200,
+                  //   height: 45,
+                  //   child: Semantics(
+                  //     value: 'hf_no_number',
+                  //     child: ElevatedButton(
+                  //         style: ElevatedButton.styleFrom(
+                  //           elevation: 0.0,
+                  //           shape: RoundedRectangleBorder(
+                  //             borderRadius: BorderRadius.circular(8.0),
+                  //           ),
+                  //           backgroundColor: Colors.grey,
+                  //           padding: EdgeInsets.zero,
+                  //         ),
+                  //         onPressed: () {
+                  //           context.push('/dialog/network?isInRoom=false').then(
+                  //             (value) {
+                  //               rw2();
+                  //             },
+                  //           );
+                  //         },
+                  //         child: Row(
+                  //           mainAxisAlignment: MainAxisAlignment.center,
+                  //           children: [
+                  //             Image.asset(
+                  //               'assets/icons/ic_network.png',
+                  //               width: 20,
+                  //               height: 20,
+                  //             ),
+                  //             SizedBox(
+                  //               width: 10,
+                  //             ),
+                  //             Text(
+                  //               localKr ? '네트워크 전환' : 'Change Network',
+                  //               style: TextStyle(
+                  //                   letterSpacing: -0.5,
+                  //                   color: Colors.white,
+                  //                   fontSize: 18,
+                  //                   fontWeight: FontWeight.w600),
+                  //             ),
+                  //           ],
+                  //         )),
+                  //   ),
+                  // ),
+                  // SizedBox(
+                  //   width: 20,
+                  // ),
                   SizedBox(
                     width: 150,
                     height: 45,

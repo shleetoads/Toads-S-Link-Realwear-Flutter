@@ -24,6 +24,7 @@ import 'package:realwear_flutter/models/serverDrawModel.dart';
 import 'package:realwear_flutter/utils/appConfig.dart';
 import 'package:realwear_flutter/utils/myLoading.dart';
 import 'package:realwear_flutter/utils/myToasts.dart';
+import 'package:realwear_flutter/utils/networkUsageTracker.dart';
 import 'package:realwear_flutter/utils/recog.dart';
 import 'package:realwear_flutter/utils/signaturePainter.dart';
 import 'package:realwear_flutter/viewModels/authViewModel.dart';
@@ -32,7 +33,6 @@ import 'package:realwear_flutter/viewModels/conferenceViewModel.dart';
 import 'package:realwear_flutter/viewModels/drawViewModel.dart';
 import 'package:realwear_flutter/viewModels/inviteMemberInViewModel.dart';
 import 'package:realwear_flutter/viewModels/localeViewModel.dart';
-import 'package:realwear_flutter/viewModels/screenShareViewModel.dart';
 import 'package:realwear_flutter/widgets/normalAlertDialog.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:uuid/uuid.dart';
@@ -983,6 +983,7 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
   Future<List<String>> _downloadWavFiles(
       List<dynamic> files, Directory directory) async {
     final dio = Dio();
+    dio.interceptors.add(NetworkUsageDioInterceptor());
     final List<String> paths = [];
     for (int i = 0; i < files.length; i++) {
       final item = files[i];
@@ -1434,7 +1435,6 @@ class _InternalDetailViewState extends ConsumerState<InternalDetailView>
   onAllUsers(dynamic data) {
     logger.i('onAllUser');
     String userList = data[0];
-    String id = data[1];
 
     final decoded = jsonDecode(userList) as List<dynamic>;
     final otherUsers = decoded.map((e) => UserModel.fromJson(e)).toList();

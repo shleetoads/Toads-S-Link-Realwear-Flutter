@@ -26,6 +26,7 @@ import 'package:realwear_flutter/utils/myLoading.dart';
 import 'package:realwear_flutter/utils/myToasts.dart';
 import 'package:realwear_flutter/utils/recog.dart';
 import 'package:realwear_flutter/utils/signaturePainter.dart';
+import 'package:realwear_flutter/utils/networkUsageTracker.dart';
 import 'package:realwear_flutter/viewModels/authViewModel.dart';
 import 'package:realwear_flutter/viewModels/chatViewModel.dart';
 import 'package:realwear_flutter/viewModels/conferenceViewModel.dart';
@@ -36,7 +37,6 @@ import 'package:realwear_flutter/viewModels/screenShareViewModel.dart';
 import 'package:realwear_flutter/widgets/normalAlertDialog.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
 import 'package:path/path.dart' as p;
 
 class ConferenceDetailView extends ConsumerStatefulWidget {
@@ -89,6 +89,8 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
   bool _recordLoading = false;
   Timer? _recordTimer;
   int _recordTime = 0;
+
+  Timer? _networkUsageToastTimer;
 
   final _chatScrollController = ScrollController();
   final _screenshotController = ScreenshotController();
@@ -172,6 +174,7 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
     WidgetsBinding.instance.addObserver(this); // 옵저버 등록
 
     initAgora();
+    _startNetworkUsageToastTimer();
 
     ref.read(screenShareViewModelProvider.notifier).onScreenShare();
 
@@ -417,19 +420,19 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
             asyncShard.setBool('dev_anc', false);
             break;
           //네트워크 변경
-          case '네트워크 전환':
-          case 'Change Network':
-            context.push(
-              '/dialog/network?isInRoom=true',
-              extra: () async {
-                await _leaveFunc();
-              },
-            ).then(
-              (value) {
-                rw2();
-              },
-            );
-            break;
+          //   case '네트워크 전환':
+          //   case 'Change Network':
+          //     context.push(
+          //       '/dialog/network?isInRoom=true',
+          //       extra: () async {
+          //         await _leaveFunc();
+          //       },
+          //     ).then(
+          //       (value) {
+          //         rw2();
+          //       },
+          //     );
+          //     break;
         }
       },
     );
@@ -438,8 +441,31 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _networkUsageToastTimer?.cancel();
     _dispose();
     super.dispose();
+  }
+
+  void _startNetworkUsageToastTimer() {
+    _networkUsageToastTimer?.cancel();
+    _networkUsageToastTimer = Timer.periodic(
+      const Duration(seconds: 60),
+      (_) {
+        if (!mounted) return;
+        final current = NetworkUsageTracker.snapshot();
+        if (current.rxBytes <= 0 && current.txBytes <= 0) return;
+
+        SocketManager().emitTracked(
+          'updateMettingByte',
+          {
+            'account_no': widget.accountNo,
+            'meet_id': widget.meetId,
+            'rxByte': current.rxBytes,
+            'txByte': current.txBytes,
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -542,6 +568,12 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
     // Add an event handler
     _engine.registerEventHandler(
       RtcEngineEventHandler(
+        onRtcStats: (connection, stats) {
+          NetworkUsageTracker.setAgoraTotals(
+            rxBytes: stats.rxBytes ?? 0,
+            txBytes: stats.txBytes ?? 0,
+          );
+        },
         onLastmileProbeResult: (result) async {
           logger.f(result.state);
 
@@ -1336,57 +1368,57 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
                     Spacer(),
                     if (!_showChat) ...[
                       //네트워크 변경
-                      Semantics(
-                        value: 'hf_no_number',
-                        child: GestureDetector(
-                          onTap: () {
-                            context.push(
-                              '/dialog/network?isInRoom=true',
-                              extra: () async {
-                                await _leaveFunc();
-                              },
-                            ).then(
-                              (value) {
-                                rw2();
-                              },
-                            );
-                          },
-                          child: Semantics(
-                            value: 'hf_no_number',
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Color(0xFF767676).withOpacity(0.8),
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(50)),
-                              ),
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 5),
-                              child: Row(
-                                children: [
-                                  Image.asset(
-                                    'assets/icons/ic_network.png',
-                                    width: 18,
-                                    height: 18,
-                                  ),
-                                  SizedBox(
-                                    width: 5,
-                                  ),
-                                  Text(
-                                    localKr ? '네트워크 전환' : 'Change Network',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: localKr ? 18 : 16,
-                                        fontWeight: FontWeight.w500),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 10,
-                      ),
+                      // Semantics(
+                      //   value: 'hf_no_number',
+                      //   child: GestureDetector(
+                      //     onTap: () {
+                      //       context.push(
+                      //         '/dialog/network?isInRoom=true',
+                      //         extra: () async {
+                      //           await _leaveFunc();
+                      //         },
+                      //       ).then(
+                      //         (value) {
+                      //           rw2();
+                      //         },
+                      //       );
+                      //     },
+                      //     child: Semantics(
+                      //       value: 'hf_no_number',
+                      //       child: Container(
+                      //         decoration: BoxDecoration(
+                      //           color: Color(0xFF767676).withOpacity(0.8),
+                      //           borderRadius:
+                      //               BorderRadius.all(Radius.circular(50)),
+                      //         ),
+                      //         padding: EdgeInsets.symmetric(
+                      //             horizontal: 20, vertical: 5),
+                      //         child: Row(
+                      //           children: [
+                      //             Image.asset(
+                      //               'assets/icons/ic_network.png',
+                      //               width: 18,
+                      //               height: 18,
+                      //             ),
+                      //             SizedBox(
+                      //               width: 5,
+                      //             ),
+                      //             Text(
+                      //               localKr ? '네트워크 전환' : 'Change Network',
+                      //               style: TextStyle(
+                      //                   color: Colors.white,
+                      //                   fontSize: localKr ? 18 : 16,
+                      //                   fontWeight: FontWeight.w500),
+                      //             ),
+                      //           ],
+                      //         ),
+                      //       ),
+                      //     ),
+                      //   ),
+                      // ),
+                      // SizedBox(
+                      //   width: 10,
+                      // ),
                       Semantics(
                         value: 'hf_no_number',
                         child: GestureDetector(
