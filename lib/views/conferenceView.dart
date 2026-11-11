@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:go_router/go_router.dart';
 import 'package:realwear_flutter/models/authModel.dart';
 import 'package:realwear_flutter/models/conferenceModel.dart';
@@ -16,6 +17,7 @@ import 'package:realwear_flutter/viewModels/conferenceListViewModel.dart';
 import 'package:realwear_flutter/viewModels/conferenceViewModel.dart';
 import 'package:realwear_flutter/viewModels/localeViewModel.dart';
 import 'package:realwear_flutter/viewModels/tokenViewModel.dart';
+import 'package:realwear_flutter/widgets/devDialog.dart';
 import 'package:realwear_flutter/widgets/normalAlertDialog.dart';
 import 'package:realwear_flutter/widgets/primaryButton.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,6 +34,16 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
   int nowPage = 0;
 
   bool localKr = true;
+  int _devTapCount = 0;
+  String _appVersion = '';
+
+  Future<void> _loadAppVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (!mounted) return;
+    setState(() {
+      _appVersion = packageInfo.version;
+    });
+  }
   switchLocale() {
     setState(() {
       localKr = !localKr;
@@ -49,6 +61,7 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
 
     super.initState();
 
+    _loadAppVersion();
     rw2();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -417,35 +430,48 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
                     ),
                   ),
                   Spacer(),
-                  Container(
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFD6E4FA),
-                      shape: BoxShape.circle,
-                    ),
-                    padding: const EdgeInsets.all(12),
-                    child: Text(
-                      authModel != null
-                          ? authModel.userName!.substring(0, 1)
-                          : '',
-                      style: const TextStyle(
-                        color: Color(0xFF6583B2),
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 10,
-                  ),
-                  Flexible(
-                    child: Text(
-                      authModel != null ? authModel.userName! : '',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                  GestureDetector(
+                    onTap: () {
+                      _devTapCount++;
+                      if (_devTapCount >= 10) {
+                        _devTapCount = 0;
+                        showDialog(
+                          context: context,
+                          builder: (context) => const DevDialog(),
+                        );
+                      }
+                    },
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFD6E4FA),
+                            shape: BoxShape.circle,
+                          ),
+                          padding: const EdgeInsets.all(12),
+                          child: Text(
+                            authModel != null
+                                ? authModel.userName!.substring(0, 1)
+                                : '',
+                            style: const TextStyle(
+                              color: Color(0xFF6583B2),
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          authModel != null ? authModel.userName! : '',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -540,45 +566,61 @@ class _ConferenceViewState extends ConsumerState<ConferenceView> {
                   // SizedBox(
                   //   width: 20,
                   // ),
-                  SizedBox(
-                    width: 150,
-                    height: 45,
-                    child: Semantics(
-                      value: 'hf_no_number',
-                      child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            elevation: 0.0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8.0),
-                            ),
-                            backgroundColor: const Color(0xFF246CFD),
-                            padding: EdgeInsets.zero,
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (_appVersion.isNotEmpty)
+                        Text(
+                          'v$_appVersion',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
                           ),
-                          onPressed: () {
-                            logout();
-                          },
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Image.asset(
-                                'assets/icons/ic_logout.png',
-                                width: 20,
-                                height: 20,
+                        ),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        width: 150,
+                        height: 45,
+                        child: Semantics(
+                          value: 'hf_no_number',
+                          child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                elevation: 0.0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8.0),
+                                ),
+                                backgroundColor: const Color(0xFF246CFD),
+                                padding: EdgeInsets.zero,
                               ),
-                              SizedBox(
-                                width: 10,
-                              ),
-                              Text(
-                                localKr ? '로그아웃' : 'Logout',
-                                style: TextStyle(
-                                    letterSpacing: -0.5,
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w600),
-                              ),
-                            ],
-                          )),
-                    ),
+                              onPressed: () {
+                                logout();
+                              },
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Image.asset(
+                                    'assets/icons/ic_logout.png',
+                                    width: 20,
+                                    height: 20,
+                                  ),
+                                  SizedBox(
+                                    width: 10,
+                                  ),
+                                  Text(
+                                    localKr ? '로그아웃' : 'Logout',
+                                    style: TextStyle(
+                                        letterSpacing: -0.5,
+                                        color: Colors.white,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              )),
+                        ),
+                      ),
+                    ],
                   )
                 ],
               ),

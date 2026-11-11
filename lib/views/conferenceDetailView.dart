@@ -34,6 +34,7 @@ import 'package:realwear_flutter/viewModels/drawViewModel.dart';
 import 'package:realwear_flutter/viewModels/inviteMemberInViewModel.dart';
 import 'package:realwear_flutter/viewModels/localeViewModel.dart';
 import 'package:realwear_flutter/viewModels/screenShareViewModel.dart';
+import 'package:realwear_flutter/widgets/devDialog.dart';
 import 'package:realwear_flutter/widgets/normalAlertDialog.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -98,6 +99,13 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
   bool localKr = true;
 
   final double _scaleSize = 35;
+
+  int dev_ains = 1;
+  bool dev_aec = true;
+  bool dev_agc = true;
+  bool dev_anc = true;
+  bool dev_meeting = true;
+  bool _devMode = false;
 
   inputDrawPoint(
       ServerDrawModel next, GlobalKey key, List<DrawModel> drawModelList) {
@@ -371,23 +379,15 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
             });
             await _engine.setCameraZoomFactor(_scale);
             break;
-          case '개발 하나 영':
-            await _engine.setAINSMode(
-                enabled: _myANC, mode: AudioAinsMode.ainsModeBalanced);
-            final asyncShared = SharedPreferencesAsync();
-            asyncShared.setInt('dev_ains', 0);
+          case '개발모드 켜기':
+            setState(() {
+              _devMode = true;
+            });
             break;
-          case '개발 하나 일':
-            await _engine.setAINSMode(
-                enabled: _myANC, mode: AudioAinsMode.ainsModeAggressive);
-            final asyncShared = SharedPreferencesAsync();
-            asyncShared.setInt('dev_ains', 1);
-            break;
-          case '개발 하나 이':
-            await _engine.setAINSMode(
-                enabled: _myANC, mode: AudioAinsMode.ainsModeUltralowlatency);
-            final asyncShared = SharedPreferencesAsync();
-            asyncShared.setInt('dev_ains', 2);
+          case '개발모드 끄기':
+            setState(() {
+              _devMode = false;
+            });
             break;
           case '개발 둘 켜기':
             await _engine.setParameters('{"che.audio.aec.enable":true}');
@@ -733,6 +733,21 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
   }
 
   joinAgora() async {
+    dev_meeting = await SharedPreferencesAsync().getBool('dev_meeting') ?? true;
+
+    await _engine.setClientRole(role: ClientRoleType.clientRoleBroadcaster);
+    // 통화볼륨/통신모드(MODE_IN_COMMUNICATION)는 Communication 프로파일이 강제함.
+    // GameStreaming 테스트 시엔 LiveBroadcasting 프로파일로 바꿔야 통신모드를 벗어나
+    // 미디어 볼륨 + 하드웨어 AGC 우회가 가능. (전원 Broadcaster 역할 전제)
+    await _engine.setChannelProfile(dev_meeting
+        ? ChannelProfileType.channelProfileCommunication
+        : ChannelProfileType.channelProfileLiveBroadcasting);
+    await _engine.setAudioProfile(
+        profile: AudioProfileType.audioProfileSpeechStandard,
+        scenario: dev_meeting
+            ? AudioScenarioType.audioScenarioMeeting
+            : AudioScenarioType.audioScenarioGameStreaming);
+
     await _engine.setVideoEncoderConfiguration(VideoEncoderConfiguration(
       dimensions: VideoDimensions(
           width: _videoDimensionsWidth, height: _videoDimensionsHeight),
@@ -787,8 +802,15 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
     bool devAec = await asyncShared.getBool('dev_aec') ?? true;
     bool devAgc = await asyncShared.getBool('dev_agc') ?? true;
     bool devAnc = await asyncShared.getBool('dev_anc') ?? true;
+    bool devMeeting = await asyncShared.getBool('dev_meeting') ?? true;
 
-    // setState(() {});
+    setState(() {
+      dev_ains = devAins;
+      dev_aec = devAec;
+      dev_agc = devAgc;
+      dev_anc = devAnc;
+      dev_meeting = devMeeting;
+    });
 
     if (!devAec) {
       await _engine.setParameters('{"che.audio.aec.enable":false}');
@@ -801,6 +823,10 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
     if (!devAnc) {
       await _engine.setParameters('{"che.audio.anc.enable":false}');
     }
+
+    await _engine.setAudioScenario(devMeeting
+        ? AudioScenarioType.audioScenarioMeeting
+        : AudioScenarioType.audioScenarioGameStreaming);
 
     await _engine.setParameters('{"che.audio.prioritize_audio":true}');
     await _engine.setParameters('{"che.audio.low_latency":true}');
@@ -832,6 +858,24 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
     List<ChatModel> chatModelList = ref.watch(chatViewModelProvider).chatModel;
 
     ref.listen(
+      chatViewModelProvider,
+      (previous, next) {
+        if (previous != null &&
+            next.chatModel.length > previous.chatModel.length) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_chatScrollController.hasClients) {
+              _chatScrollController.animateTo(
+                _chatScrollController.position.maxScrollExtent,
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+              );
+            }
+          });
+        }
+      },
+    );
+
+    ref.listen(
       drawViewModelProvider,
       (previous, next) {
         if (next != null) {
@@ -846,7 +890,7 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
 
     return Semantics(
       label:
-          "hf_add_commands:방 나가기|Leave Room|초대하기|Invite|플래시 켜기|Flash On|플래시 끄기|Flash Off|화면녹화 켜기|Screen Recording On|화면녹화 끄기|Screen Recording Off|메뉴 열기|Show Menu|메뉴 닫기|Hide Menu|화면공유 켜기|Screen Share On|화면공유 끄기|Screen Share Off|마이크 켜기|Mike On|마이크 끄기|Mike Off|사진 저장|Capture|채팅 켜기|Chat On|채팅 끄기|Chat Off|배율 1|배율 2|배율 3|배율 4|배율 5|Zoom One|Zoom Two|Zoom Three|Zoom Four|Zoom Five|뒤로가기|Go Back|네트워크 전환|Change Network|증폭 켜기|Noise Boost On|증폭 끄기|Noise Boost Off|개발 하나 영|개발 하나 일|개발 하나 이|개발 둘 켜기|개발 둘 끄기|개발 삼 켜기|개발 삼 끄기|개발 넷 켜기|개발 넷 끄기|",
+          "hf_add_commands:방 나가기|Leave Room|초대하기|Invite|플래시 켜기|Flash On|플래시 끄기|Flash Off|화면녹화 켜기|Screen Recording On|화면녹화 끄기|Screen Recording Off|메뉴 열기|Show Menu|메뉴 닫기|Hide Menu|화면공유 켜기|Screen Share On|화면공유 끄기|Screen Share Off|마이크 켜기|Mike On|마이크 끄기|Mike Off|사진 저장|Capture|채팅 켜기|Chat On|채팅 끄기|Chat Off|배율 1|배율 2|배율 3|배율 4|배율 5|Zoom One|Zoom Two|Zoom Three|Zoom Four|Zoom Five|뒤로가기|Go Back|네트워크 전환|Change Network|증폭 켜기|Noise Boost On|증폭 끄기|Noise Boost Off|개발 하나 영|개발 하나 일|개발 하나 이|개발 둘 켜기|개발 둘 끄기|개발 삼 켜기|개발 삼 끄기|개발 넷 켜기|개발 넷 끄기|개발모드 켜기|개발모드 끄기|",
       child: Scaffold(
         backgroundColor: Colors.black,
         body: SizedBox(
@@ -1186,6 +1230,45 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
                                 ),
                               ),
                             ),
+                            if (_devMode)
+                              Semantics(
+                                value: 'hf_no_number',
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.translucent,
+                                  onTap: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => DevDialog(engine: _engine, myANC: _myANC),
+                                    );
+                                  },
+                                  child: Semantics(
+                                    value: 'hf_no_number',
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 20),
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.developer_mode,
+                                            color: Colors.white,
+                                            size: 25,
+                                          ),
+                                          const SizedBox(height: 15),
+                                          const Text(
+                                            'Dev',
+                                            style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w600),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             // SizedBox(
                             //   width: 5,
                             // ),
@@ -1464,7 +1547,7 @@ class _ConferenceDetailViewState extends ConsumerState<ConferenceDetailView>
                 Positioned(
                   right: 0,
                   top: 0,
-                  bottom: _isMenuVisible ? 120 : 0,
+                  bottom: 0,
                   child: Container(
                     width: 280,
                     color: Color(0xFF111111).withOpacity(0.8),
